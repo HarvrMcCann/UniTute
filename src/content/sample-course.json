@@ -115,7 +115,7 @@
             {
               "id": "b-cn-phasor-math",
               "type": "math",
-              "latex": "\\operatorname{Re}\\{A e^{j\\omega t}\\} = |A|\\cos(\\omega t + \\theta_1), \\qquad \\operatorname{Im}\\{A e^{j\\omega t}\\} = |A|\\sin(\\omega t + \\theta_1)"
+              "latex": "\\begin{gathered} \\operatorname{Re}\\{A e^{j\\omega t}\\} = |A|\\cos(\\omega t + \\theta_1) \\\\ \\operatorname{Im}\\{A e^{j\\omega t}\\} = |A|\\sin(\\omega t + \\theta_1) \\end{gathered}"
             },
             {
               "id": "b-cn-phasor-meaning",
@@ -141,9 +141,9 @@
               "type": "multipleChoice",
               "conceptId": "c-complex-polar",
               "prompt": "What is $(3\\angle 20^\\circ) \\times (2\\angle 40^\\circ)$?",
-              "options": ["$6\\angle 60^\\circ$", "$5\\angle 60^\\circ$", "$6\\angle 800^\\circ$", "$1.5\\angle -20^\\circ$"],
+              "options": ["$6\\angle 60^\\circ$", "$5\\angle 60^\\circ$", "$6\\angle 800^\\circ$", "$1.5\\angle{-20^\\circ}$"],
               "answerIndex": 0,
-              "explanation": "In polar form you multiply the magnitudes ($3 \\times 2 = 6$) and add the angles ($20^\\circ + 40^\\circ = 60^\\circ$). $1.5\\angle -20^\\circ$ is what you'd get by dividing."
+              "explanation": "In polar form you multiply the magnitudes ($3 \\times 2 = 6$) and add the angles ($20^\\circ + 40^\\circ = 60^\\circ$). $1.5\\angle{-20^\\circ}$ is what you'd get by dividing."
             },
             {
               "id": "q-cn-polar",
@@ -171,8 +171,8 @@
             {
               "id": "b-ft-pair",
               "type": "math",
-              "latex": "X(j\\omega) = \\int_{-\\infty}^{\\infty} x(t)\\, e^{-j\\omega t}\\, dt \\qquad x(t) = \\frac{1}{2\\pi}\\int_{-\\infty}^{\\infty} X(j\\omega)\\, e^{j\\omega t}\\, d\\omega",
-              "caption": "Analysis (left) and synthesis (right)"
+              "latex": "\\begin{gathered} X(j\\omega) = \\int_{-\\infty}^{\\infty} x(t)\\, e^{-j\\omega t}\\, dt \\\\[0.6em] x(t) = \\frac{1}{2\\pi}\\int_{-\\infty}^{\\infty} X(j\\omega)\\, e^{j\\omega t}\\, d\\omega \\end{gathered}",
+              "caption": "Analysis (top) and synthesis (bottom)"
             },
             {
               "id": "b-ft-synthesis",
@@ -203,7 +203,7 @@
             {
               "id": "b-ft-phase-math",
               "type": "math",
-              "latex": "x(t) = 1 + \\tfrac{1}{2}\\cos(2\\pi t + \\phi_1) + \\cos(4\\pi t + \\phi_2) + \\tfrac{2}{3}\\cos(6\\pi t + \\phi_3)"
+              "latex": "\\begin{aligned} x(t) = 1 &+ \\tfrac{1}{2}\\cos(2\\pi t + \\phi_1) \\\\ &+ \\cos(4\\pi t + \\phi_2) \\\\ &+ \\tfrac{2}{3}\\cos(6\\pi t + \\phi_3) \\end{aligned}"
             },
             {
               "id": "b-ft-phase-result",
@@ -301,7 +301,7 @@
             {
               "id": "b-fr-polar-math",
               "type": "math",
-              "latex": "|Y(j\\omega)| = |H(j\\omega)|\\,|X(j\\omega)|, \\qquad \\angle Y(j\\omega) = \\angle H(j\\omega) + \\angle X(j\\omega)"
+              "latex": "\\begin{gathered} |Y(j\\omega)| = |H(j\\omega)|\\,|X(j\\omega)| \\\\ \\angle Y(j\\omega) = \\angle H(j\\omega) + \\angle X(j\\omega) \\end{gathered}"
             },
             {
               "id": "b-fr-key",
@@ -355,8 +355,8 @@
               "id": "q-fr-output",
               "type": "multipleChoice",
               "conceptId": "c-frequency-response",
-              "prompt": "At some frequency $\\omega_0$ the input has $X(j\\omega_0) = 2\\angle 30^\\circ$ and the system has $H(j\\omega_0) = 0.5\\angle -90^\\circ$. What is $Y(j\\omega_0)$?",
-              "options": ["$1\\angle -60^\\circ$", "$2.5\\angle -60^\\circ$", "$1\\angle 120^\\circ$", "$4\\angle -120^\\circ$"],
+              "prompt": "At some frequency $\\omega_0$ the input has $X(j\\omega_0) = 2\\angle 30^\\circ$ and the system has $H(j\\omega_0) = 0.5\\angle{-90^\\circ}$. What is $Y(j\\omega_0)$?",
+              "options": ["$1\\angle{-60^\\circ}$", "$2.5\\angle{-60^\\circ}$", "$1\\angle 120^\\circ$", "$4\\angle{-120^\\circ}$"],
               "answerIndex": 0,
               "explanation": "Multiply magnitudes: $0.5 \\times 2 = 1$. Add phases: $-90^\\circ + 30^\\circ = -60^\\circ$."
             },
@@ -364,14 +364,14 @@
               "id": "q-fr-steps",
               "type": "ordering",
               "conceptId": "c-frequency-response",
-              "prompt": "Put these steps in order to find an LTI system's output using the frequency domain.",
+              "prompt": "You know a system's input spectrum $X(j\\omega)$ but nothing about the system yet. Put these steps in order to find its output $y(t)$.",
               "items": [
-                "Find $X(j\\omega)$, the Fourier transform of the input",
-                "Find $H(j\\omega)$, the Fourier transform of the impulse response",
+                "Measure the impulse response $h(t)$",
+                "Fourier transform $h(t)$ to get $H(j\\omega)$",
                 "Multiply: $Y(j\\omega) = H(j\\omega)X(j\\omega)$",
                 "Inverse Fourier transform $Y(j\\omega)$ to get $y(t)$"
               ],
-              "explanation": "Steps 1 and 2 can happen in either order since they're independent, but both must come before the multiplication, and the inverse transform is always last."
+              "explanation": "Each step needs the one before it: you can't transform $h(t)$ until you've measured it, you can't multiply until you have $H(j\\omega)$, and the inverse transform turns the product back into a time signal."
             },
             {
               "id": "q-fr-delay",
@@ -449,7 +449,7 @@
             {
               "id": "b-fi-rc-math",
               "type": "math",
-              "latex": "\\underbrace{\\frac{V_c}{V_s} = \\frac{1}{1 + j\\omega RC}}_{\\text{output across } C:\\ \\text{low-pass}} \\qquad \\underbrace{\\frac{V_R}{V_s} = \\frac{j\\omega RC}{1 + j\\omega RC}}_{\\text{output across } R:\\ \\text{high-pass}}"
+              "latex": "\\begin{gathered} \\underbrace{\\frac{V_c}{V_s} = \\frac{1}{1 + j\\omega RC}}_{\\text{across } C:\\ \\text{low-pass}} \\\\[0.8em] \\underbrace{\\frac{V_R}{V_s} = \\frac{j\\omega RC}{1 + j\\omega RC}}_{\\text{across } R:\\ \\text{high-pass}} \\end{gathered}"
             },
             {
               "id": "b-fi-practical",
@@ -520,7 +520,7 @@
             {
               "id": "b-bo-why-math",
               "type": "math",
-              "latex": "Y(j\\omega) = H(j\\omega)X(j\\omega) \\;\\Longrightarrow\\; \\log|Y(j\\omega)| = \\log|H(j\\omega)| + \\log|X(j\\omega)|"
+              "latex": "\\begin{gathered} Y(j\\omega) = H(j\\omega)X(j\\omega) \\\\ \\Downarrow \\\\ \\log|Y(j\\omega)| = \\log|H(j\\omega)| + \\log|X(j\\omega)| \\end{gathered}"
             },
             {
               "id": "b-bo-why",
@@ -664,7 +664,7 @@
             {
               "id": "b-so-second-form",
               "type": "math",
-              "latex": "\\frac{d^2y}{dt^2} + 2\\xi\\omega_n\\frac{dy}{dt} + \\omega_n^2\\,y = \\omega_n^2\\,x \\qquad H(j\\omega) = \\frac{\\omega_n^2}{(j\\omega)^2 + 2\\xi\\omega_n(j\\omega) + \\omega_n^2}"
+              "latex": "\\begin{gathered} \\frac{d^2y}{dt^2} + 2\\xi\\omega_n\\frac{dy}{dt} + \\omega_n^2\\,y = \\omega_n^2\\,x \\\\[0.8em] H(j\\omega) = \\frac{\\omega_n^2}{(j\\omega)^2 + 2\\xi\\omega_n(j\\omega) + \\omega_n^2} \\end{gathered}"
             },
             {
               "id": "b-so-second-params",

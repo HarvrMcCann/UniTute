@@ -83,9 +83,12 @@
   --radius-panel: 16px;
 }
 
-html,
-body {
+/* Background on <html> only: a body background would paint over the -z-10 blobs */
+html {
   background: var(--bg);
+}
+
+body {
   color: var(--text);
 }
 
