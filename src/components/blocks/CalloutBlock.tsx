@@ -19,7 +19,7 @@ export function CalloutBlock({ block }: { block: BlockOf<"callout"> }) {
   const colour = COLOURS[block.variant];
   return (
     <aside
-      className="rounded-2xl border-l-[3px] px-5 py-4 backdrop-blur-xl"
+      className="rounded-2xl border-l-[3px] px-5 py-4 frost"
       style={{ borderColor: colour, background: `color-mix(in srgb, ${colour} 9%, var(--panel))` }}
     >
       <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: colour }}>

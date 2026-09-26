@@ -29,7 +29,7 @@ const TUTOR_PANEL_CLASSES: Record<TutorPanelMode, string> = {
   closed: "hidden",
 };
 
-const panel = "rounded-2xl border border-line bg-panel backdrop-blur-xl";
+const panel = "rounded-2xl border border-line bg-panel frost";
 
 type ClassroomShellProps = {
   outline: CourseOutline;
@@ -169,7 +169,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
               role="dialog"
               aria-modal="true"
               aria-label="Curriculum"
-              className="absolute inset-y-0 left-0 flex w-[85vw] max-w-[320px] flex-col border-r border-line bg-panel-strong backdrop-blur-xl"
+              className="absolute inset-y-0 left-0 flex w-[85vw] max-w-[320px] flex-col border-r border-line bg-panel-strong"
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}

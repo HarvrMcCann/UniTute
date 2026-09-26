@@ -4,7 +4,7 @@ import { StepReveal } from "./StepReveal";
 
 export function WorkedExampleBlock({ block }: { block: BlockOf<"workedExample"> }) {
   return (
-    <div className="rounded-2xl border border-line bg-panel px-5 py-5 backdrop-blur-xl">
+    <div className="rounded-2xl border border-line bg-panel px-5 py-5 frost">
       <p className="text-xs font-semibold uppercase tracking-wider text-faint">Worked example</p>
       <Markdown className="mt-2">{block.problem}</Markdown>
       <StepReveal

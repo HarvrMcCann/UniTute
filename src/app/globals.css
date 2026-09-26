@@ -108,37 +108,38 @@ body {
 
 /* ---------- Background blobs ---------- */
 
+/* Soft radial gradients instead of filter: blur(). They look the same but cost almost nothing
+   to draw, so the drifting background never makes phones stutter. */
 .blob {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(90px);
   will-change: transform;
 }
 
 .blob-teal {
-  background: var(--blob-teal);
-  width: 55vmax;
-  height: 55vmax;
-  top: -20vmax;
-  left: -15vmax;
+  background: radial-gradient(closest-side, var(--blob-teal), transparent);
+  width: 80vmax;
+  height: 80vmax;
+  top: -32vmax;
+  left: -28vmax;
   animation: drift-a 38s ease-in-out infinite alternate;
 }
 
 .blob-violet {
-  background: var(--blob-violet);
-  width: 48vmax;
-  height: 48vmax;
-  bottom: -22vmax;
-  right: -12vmax;
+  background: radial-gradient(closest-side, var(--blob-violet), transparent);
+  width: 72vmax;
+  height: 72vmax;
+  bottom: -34vmax;
+  right: -24vmax;
   animation: drift-b 46s ease-in-out infinite alternate;
 }
 
 .blob-peach {
-  background: var(--blob-peach);
-  width: 36vmax;
-  height: 36vmax;
-  top: 35%;
-  left: 40%;
+  background: radial-gradient(closest-side, var(--blob-peach), transparent);
+  width: 56vmax;
+  height: 56vmax;
+  top: 28%;
+  left: 32%;
   animation: drift-c 52s ease-in-out infinite alternate;
 }
 
@@ -154,6 +155,21 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .blob { animation: none; }
+}
+
+/* ---------- Frosted panels ---------- */
+
+/* Use `frost` instead of backdrop-blur-* so the cost can be tuned in one place.
+   Phones get a lighter blur: re-blurring the page behind every panel on each scroll frame
+   is what made scrolling and the drawer feel slow. */
+@utility frost {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+
+  @media (max-width: 767px) {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
 }
 
 /* ---------- Lesson prose (rendered markdown) ---------- */

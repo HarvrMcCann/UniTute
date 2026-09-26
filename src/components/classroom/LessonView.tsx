@@ -97,7 +97,7 @@ function LessonLink({
   return (
     <Link
       href={href}
-      className={`pressable pressable-soft group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-line bg-panel px-5 py-4 backdrop-blur-xl transition-colors hover:border-accent/40 ${
+      className={`pressable pressable-soft group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-line bg-panel px-5 py-4 frost transition-colors hover:border-accent/40 ${
         next ? "sm:col-start-2 sm:flex-row-reverse sm:text-right" : ""
       }`}
     >

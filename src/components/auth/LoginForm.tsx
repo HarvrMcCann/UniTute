@@ -31,7 +31,7 @@ export function LoginForm({ next }: { next: string }) {
 
   if (status.kind === "sent") {
     return (
-      <div className="mt-8 rounded-2xl border border-line bg-panel p-5 backdrop-blur-xl">
+      <div className="mt-8 rounded-2xl border border-line bg-panel p-5 frost">
         <p className="font-display text-lg">Check your email</p>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           We sent a sign-in link to <span className="text-text">{status.email}</span>. Open it on this device or any
@@ -53,7 +53,7 @@ export function LoginForm({ next }: { next: string }) {
       <button
         type="button"
         onClick={signInWithGoogle}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-panel px-4 py-3 font-medium backdrop-blur-xl transition-colors hover:bg-hover"
+        className="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-panel px-4 py-3 font-medium frost transition-colors hover:bg-hover"
       >
         <GoogleMark />
         Continue with Google

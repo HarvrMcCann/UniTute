@@ -62,7 +62,7 @@ export function AccountMenu({ account }: { account: Account | null }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-line bg-panel-strong p-2 shadow-xl backdrop-blur-xl"
+            className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-line bg-panel-strong p-2 shadow-xl frost"
           >
             <div className="px-3 py-2">
               <p className="truncate font-medium">{name}</p>

@@ -56,7 +56,7 @@ export default async function HomePage() {
               <li key={course.id}>
                 <Link
                   href={`/course/${course.id}`}
-                  className="pressable pressable-soft group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-line bg-panel p-5 backdrop-blur-xl transition-colors hover:border-accent/40"
+                  className="pressable pressable-soft group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-line bg-panel p-5 frost transition-colors hover:border-accent/40"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-accent">

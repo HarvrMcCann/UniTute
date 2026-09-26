@@ -14,7 +14,7 @@ export function CheckBlock({ question }: { question: Question }) {
   const explanation = <Markdown>{question.explanation}</Markdown>;
 
   return (
-    <div className="rounded-2xl border border-line bg-panel p-5 backdrop-blur-xl sm:p-6">
+    <div className="rounded-2xl border border-line bg-panel p-5 frost sm:p-6">
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent">
         <span className="size-1.5 rounded-full bg-accent" aria-hidden />
         Check your understanding · {TYPE_LABELS[question.type]}

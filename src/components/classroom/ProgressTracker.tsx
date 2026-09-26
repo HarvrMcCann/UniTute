@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/browser";
+import { saveProgress, type ProgressUpdate } from "@/app/actions";
 import { useProgress } from "./ProgressContext";
 
 export const LESSON_SCROLL_ID = "lesson-scroll";
@@ -40,26 +40,22 @@ export function ProgressTracker({ courseId, lessonKey, lessonDbId, resumeBlockId
   // Track position and completion.
   useEffect(() => {
     if (!userId) return;
-    const supabase = createClient();
     const container = document.getElementById(LESSON_SCROLL_ID);
     if (!container) return;
 
-    const base = { user_id: userId, lesson_id: lessonDbId, course_id: courseId };
-    const save = async (fields: Record<string, string | null>) => {
-      const { error } = await supabase
-        .from("lesson_progress")
-        .upsert({ ...base, ...fields, updated_at: new Date().toISOString() });
-      if (error) console.warn("Couldn't save progress:", error.message);
-    };
+    const save = (fields: Omit<ProgressUpdate, "courseId" | "lessonDbId">) =>
+      saveProgress({ courseId, lessonDbId, ...fields }).catch(() => {
+        // offline or navigating away: the next save catches up
+      });
 
     // Opening a lesson counts as a visit, so it becomes the "continue" lesson.
-    void save(resumeBlockId ? { last_block_id: resumeBlockId } : {});
+    void save(resumeBlockId ? { lastBlockId: resumeBlockId } : {});
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     const flush = () => {
       clearTimeout(timer);
       if (pending.current) {
-        void save({ last_block_id: pending.current });
+        void save({ lastBlockId: pending.current });
         pending.current = null;
       }
     };
@@ -89,7 +85,7 @@ export function ProgressTracker({ courseId, lessonKey, lessonDbId, resumeBlockId
         if (!entry.isIntersecting || completed) return;
         completed = true;
         markCompleted(lessonKey);
-        void save({ completed_at: new Date().toISOString() });
+        void save({ completed: true });
       },
       { root: container },
     );
@@ -117,7 +113,7 @@ export function ProgressTracker({ courseId, lessonKey, lessonDbId, resumeBlockId
           exit={{ opacity: 0, y: 12 }}
           className="fixed inset-x-0 bottom-5 z-30 flex justify-center px-4"
         >
-          <div className="flex items-center gap-3 rounded-full border border-line bg-panel-strong py-1.5 pl-4 pr-1.5 text-sm shadow-lg backdrop-blur-xl">
+          <div className="flex items-center gap-3 rounded-full border border-line bg-panel-strong py-1.5 pl-4 pr-1.5 text-sm shadow-lg frost">
             <span className="text-muted">Picked up where you left off</span>
             <button
               type="button"
