@@ -44,7 +44,9 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
   const [navCollapsed, setNavCollapsed] = useState(false); // desktop column
   const [drawerOpen, setDrawerOpen] = useState(false); // tablet + phone
   const [tutorMode, setTutorMode] = useState<TutorPanelMode>("auto"); // tablet + desktop
+  const [tutorWidth, setTutorWidth] = useState(380); // px, set when opened (380 desktop, 340 tablet)
   const [sheetOpen, setSheetOpen] = useState(false); // phone
+  const [sheetExpanded, setSheetExpanded] = useState(false); // phone: half height or nearly full
 
   const sheetDrag = useDragControls();
 
@@ -54,6 +56,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
       if (e.key !== "Escape") return;
       setDrawerOpen(false);
       setSheetOpen(false);
+      setSheetExpanded(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -69,15 +72,15 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
       setSheetOpen((o) => !o);
       return;
     }
-    setTutorMode((mode) => {
-      const isOpen = mode === "open" || (mode === "auto" && matches(DESKTOP));
-      return isOpen ? "closed" : "open";
-    });
+    const isOpen = tutorMode === "open" || (tutorMode === "auto" && matches(DESKTOP));
+    if (!isOpen) setTutorWidth(matches(DESKTOP) ? 380 : 340);
+    setTutorMode(isOpen ? "closed" : "open");
   }
 
   function closeTutor() {
     setTutorMode("closed");
     setSheetOpen(false);
+    setSheetExpanded(false);
   }
 
   return (
@@ -122,17 +125,33 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
 
         {/* Lesson */}
         {/* Scroll position is restored and tracked by ProgressTracker */}
-        <main id={LESSON_SCROLL_ID} className="scroll-thin min-w-0 flex-1 overflow-y-auto">
+        {/* With the phone tutor sheet open, pad the bottom so the whole lesson can still scroll into view above it */}
+        <main
+          id={LESSON_SCROLL_ID}
+          className={`scroll-thin min-w-0 flex-1 overflow-y-auto ${sheetOpen ? "max-md:pb-[50dvh]" : ""}`}
+        >
           {children}
         </main>
 
-        {/* Tutor side panel (tablet + desktop) */}
-        <aside
-          aria-label="Tutor"
-          className={`w-[340px] shrink-0 flex-col overflow-hidden lg:w-[380px] ${panel} ${TUTOR_PANEL_CLASSES[tutorMode]}`}
-        >
-          <TutorPanel lessonTitle={lessonTitle} onClose={closeTutor} />
-        </aside>
+        {/* Tutor side panel (tablet + desktop): slides like the curriculum column */}
+        <AnimatePresence initial={false}>
+          {tutorMode !== "closed" && (
+            <motion.aside
+              // "auto" and "open" are separate elements so opening on tablet (auto -> open) slides in
+              key={tutorMode === "auto" ? "tutor-auto" : "tutor-open"}
+              aria-label="Tutor"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: tutorWidth, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className={`shrink-0 flex-col overflow-hidden ${panel} ${TUTOR_PANEL_CLASSES[tutorMode]}`}
+            >
+              <div className="flex h-full flex-col" style={{ width: tutorWidth }}>
+                <TutorPanel lessonTitle={lessonTitle} onClose={closeTutor} />
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Curriculum drawer (tablet + phone) */}
@@ -171,48 +190,45 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
         )}
       </AnimatePresence>
 
-      {/* Tutor bottom sheet (phone) */}
+      {/* Tutor bottom sheet (phone). Not modal: it covers the lower half and the lesson
+          above stays scrollable, so you can read while writing a question. */}
       <AnimatePresence>
         {sheetOpen && (
-          <div className="fixed inset-0 z-40 md:hidden">
-            <motion.div
-              className="absolute inset-0 bg-scrim"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSheetOpen(false)}
-            />
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-label="Tutor"
-              className="absolute inset-x-0 bottom-0 flex h-[78dvh] flex-col rounded-t-3xl border-t border-line bg-panel-strong backdrop-blur-xl"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
-              drag="y"
-              dragListener={false}
-              dragControls={sheetDrag}
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0, bottom: 0.6 }}
-              onDragEnd={(_, info) => {
-                if (info.offset.y > 120 || info.velocity.y > 500) setSheetOpen(false);
-              }}
+          <motion.div
+            role="dialog"
+            aria-label="Tutor"
+            className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-3xl border-t border-line bg-panel-strong shadow-[0_-8px_30px_rgb(0_0_0/0.25)] md:hidden"
+            initial={{ y: "100%", height: "50dvh" }}
+            animate={{ y: 0, height: sheetExpanded ? "88dvh" : "50dvh" }}
+            exit={{ y: "100%" }}
+            transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
+            drag="y"
+            dragListener={false}
+            dragControls={sheetDrag}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.15, bottom: 0.6 }}
+            onDragEnd={(_, info) => {
+              const down = info.offset.y > 100 || info.velocity.y > 500;
+              const up = info.offset.y < -40 || info.velocity.y < -500;
+              if (up) setSheetExpanded(true);
+              else if (down && sheetExpanded) setSheetExpanded(false);
+              else if (down) closeTutor();
+            }}
+          >
+            {/* Drag handle (only this drags, so the chat can scroll). Tap to grow or shrink. */}
+            <button
+              type="button"
+              aria-label={sheetExpanded ? "Shrink tutor" : "Expand tutor"}
+              className="flex w-full cursor-grab touch-none justify-center pb-1.5 pt-3 active:transform-none"
+              onPointerDown={(e) => sheetDrag.start(e)}
+              onClick={() => setSheetExpanded((x) => !x)}
             >
-              {/* Drag handle: only this starts a drag, so the chat can still scroll */}
-              <div
-                className="flex cursor-grab touch-none justify-center pb-1 pt-3"
-                onPointerDown={(e) => sheetDrag.start(e)}
-                aria-hidden
-              >
-                <div className="h-1 w-10 rounded-full bg-faint" />
-              </div>
-              <div className="min-h-0 flex-1">
-                <TutorPanel lessonTitle={lessonTitle} onClose={closeTutor} />
-              </div>
-            </motion.div>
-          </div>
+              <span className="h-1 w-10 rounded-full bg-faint" />
+            </button>
+            <div className="min-h-0 flex-1">
+              <TutorPanel lessonTitle={lessonTitle} onClose={closeTutor} />
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

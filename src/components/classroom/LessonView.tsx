@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BlockRenderer } from "@/components/blocks/BlockRenderer";
+import { LinkPending } from "@/components/ui/LinkPending";
 import { ArrowLeftIcon, ArrowRightIcon, ClockIcon } from "@/components/ui/icons";
 import type { LessonLocation } from "@/lib/course/load";
 import type { Course } from "@/lib/course/schema";
@@ -96,7 +97,7 @@ function LessonLink({
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-3 rounded-2xl border border-line bg-panel px-5 py-4 backdrop-blur-xl transition-colors hover:border-accent/40 ${
+      className={`pressable pressable-soft group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-line bg-panel px-5 py-4 backdrop-blur-xl transition-colors hover:border-accent/40 ${
         next ? "sm:col-start-2 sm:flex-row-reverse sm:text-right" : ""
       }`}
     >
@@ -109,6 +110,7 @@ function LessonLink({
         <span className="block text-xs text-muted">{label}</span>
         <span className="mt-0.5 block font-medium leading-snug">{title}</span>
       </span>
+      <LinkPending />
     </Link>
   );
 }

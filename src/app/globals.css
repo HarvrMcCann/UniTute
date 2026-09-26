@@ -212,3 +212,47 @@ body {
 
 /* Thin scrollbars inside panels */
 .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--panel-border) transparent; }
+
+/* ---------- Press feedback ---------- */
+
+/* In the base layer so component utilities (transition-colors etc.) still win. */
+@layer base {
+  /* Every button (and links marked .pressable) visibly reacts the instant it's touched,
+     even if the network is slow to respond. */
+  button,
+  .pressable {
+    -webkit-tap-highlight-color: transparent;
+    transition-property: transform, background-color, border-color, color, opacity;
+    transition-duration: 150ms;
+  }
+
+  button:not(:disabled):active,
+  .pressable:active {
+    transform: scale(0.96);
+    transition-duration: 60ms;
+  }
+
+  /* Big cards shrink less so they don't look like they're collapsing */
+  .pressable-soft:active {
+    transform: scale(0.985);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active,
+    .pressable:active {
+      transform: none;
+      opacity: 0.75;
+    }
+  }
+}
+
+/* Pending navigation: a slow shimmer across the link that's loading */
+@keyframes pending-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.pending-sweep {
+  animation: pending-sweep 1.1s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
+}

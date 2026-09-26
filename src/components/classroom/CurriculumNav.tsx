@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeftIcon, CheckIcon, ChevronIcon } from "@/components/ui/icons";
+import { LinkPending } from "@/components/ui/LinkPending";
+import { ArrowLeftIcon, ChevronIcon } from "@/components/ui/icons";
 import type { CourseOutline } from "@/lib/course/load";
 import { useProgress } from "./ProgressContext";
 
@@ -76,26 +77,26 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
                         href={`/course/${outline.id}/${lesson.id}`}
                         onClick={onNavigate}
                         aria-current={current ? "page" : undefined}
-                        className={`flex items-start gap-3 rounded-xl py-2 pl-8 pr-3 text-sm transition-colors ${
+                        className={`pressable relative flex items-start gap-3 overflow-hidden rounded-xl py-2 pl-8 pr-3 text-sm transition-colors ${
                           current ? "bg-accent-soft text-text" : "text-muted hover:bg-hover hover:text-text"
                         }`}
                       >
-                        {done ? (
-                          <span className="mt-px grid size-4 shrink-0 place-items-center rounded-full bg-accent text-accent-contrast">
-                            <CheckIcon className="size-3" />
-                            <span className="sr-only">Completed:</span>
-                          </span>
-                        ) : (
-                          <span
-                            className={`mt-px w-4 shrink-0 text-right text-xs tabular-nums ${
-                              current ? "text-accent" : "text-faint"
-                            }`}
-                          >
-                            {lessonNumbers.get(lesson.id)}
-                          </span>
-                        )}
+                        {/* Lesson number; a completed lesson gets a filled accent ring around it */}
+                        <span
+                          className={`mt-px grid size-[1.125rem] shrink-0 place-items-center rounded-full text-[0.65rem] font-semibold tabular-nums ${
+                            done
+                              ? "bg-accent-soft text-accent ring-[1.5px] ring-accent"
+                              : current
+                                ? "text-accent"
+                                : "text-faint"
+                          }`}
+                        >
+                          {lessonNumbers.get(lesson.id)}
+                          {done && <span className="sr-only"> (completed)</span>}
+                        </span>
                         <span className="min-w-0 flex-1 leading-snug">{lesson.title}</span>
                         <span className="shrink-0 text-xs text-faint">{lesson.estMinutes}m</span>
+                        <LinkPending />
                       </Link>
                     </li>
                   );
