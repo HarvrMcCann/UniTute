@@ -32,7 +32,10 @@ src/
     course/[courseId]/
       page.tsx              # redirects to first (or last-visited) lesson
       [lessonId]/page.tsx   # classroom view
-    api/                    # route handlers (phase 3+)
+    login/page.tsx          # magic link + Google sign-in
+    auth/callback/route.ts  # every sign-in lands here (token_hash or OAuth code)
+    actions.ts              # server actions (sign out, save theme)
+  proxy.ts                  # refreshes the Supabase session cookie (Next 16 name for middleware)
   components/
     classroom/              # CurriculumSidebar, LessonView, TutorPanel, TopBar...
     blocks/                 # one component per content block type (TextBlock, CalloutBlock...)
@@ -40,11 +43,17 @@ src/
   lib/
     course/
       schema.ts             # Zod schema + inferred types for course JSON (single source of truth)
-      load.ts               # getCourse / getLesson helpers (sample JSON now, Supabase later)
+      rows.ts               # course JSON <-> table rows (pure, tested)
+      save.ts               # write a whole course with the admin client (seed now, generation later)
+      load.ts               # server reads via the user's client (RLS applies)
+    supabase/               # server.ts (user, cookies), browser.ts, admin.ts (secret key, scripts/jobs only)
+    progress.ts             # lesson progress reads
     theme.ts
   content/
     sample-course.json      # hand-written sample course (phase 2, from ENGR2722 week 7)
 tests/                      # Vitest unit tests (*.test.ts)
+scripts/                    # one-off Node scripts run with tsx (e.g. seedSampleCourse.ts)
+supabase/migrations/        # SQL, applied by pasting into the Supabase SQL Editor (numbered, never edited once run)
 ```
 
 Next.js here is v16: `params` are Promises, use the global `PageProps<"/route">` / `LayoutProps` helpers. See AGENTS.md: check `node_modules/next/dist/docs/` before using an API you're unsure of.
@@ -77,6 +86,7 @@ npm run build        # production build (run before pushing)
 npm run lint         # ESLint
 npm run typecheck    # tsc --noEmit
 npm test             # Vitest unit tests (schema validation, mastery formula, etc.)
+npm run seed         # load/refresh the sample course in Supabase (safe to re-run; keeps progress)
 ```
 
 Before calling a phase done: `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` all pass, and the phase's "done when" check is handed to the user to try in the browser.
@@ -86,6 +96,8 @@ Before calling a phase done: `npm run lint`, `npm run typecheck`, `npm test` and
 - API keys and service secrets go in `.env.local` only. It is gitignored; never commit it and never print key values.
 - Keep `.env.example` up to date with the variable **names** (no values).
 - Only `NEXT_PUBLIC_*` variables may reach the browser; the Anthropic key and Supabase service-role key are server-only.
+- Schema changes: add a new numbered file in `supabase/migrations/` and ask the user to run it in the SQL Editor. Security: RLS on every table; browsers only use the publishable key.
+- Never print `.env.local` values, even partially masked.
 - Commit at the end of each phase (and at sensible checkpoints within one).
 
 ## Working with the user
