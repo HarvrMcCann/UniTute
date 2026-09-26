@@ -1,19 +1,49 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 
 type Status = { kind: "idle" } | { kind: "sending" } | { kind: "sent"; email: string } | { kind: "error"; message: string };
 
-export function LoginForm({ next }: { next: string }) {
+type LoginFormProps = {
+  /** Where to go after signing in via a link or Google. */
+  next: string;
+  /** Signed in by typing the emailed code (no page change). Defaults to going to `next`. */
+  onSignedIn?: () => void;
+  /** Runs before anything that may leave this page (Google, or a link in the email), e.g. to save unsent work. */
+  beforeLeave?: () => Promise<void>;
+};
+
+export function LoginForm({ next, onSignedIn, beforeLeave }: LoginFormProps) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (status.kind !== "sent") return;
+    setVerifying(true);
+    setCodeError(null);
+    const { error } = await createClient().auth.verifyOtp({ email: status.email, token: code.trim(), type: "email" });
+    setVerifying(false);
+    if (error) return setCodeError("That code didn't work. Check it, or request a new email.");
+    if (onSignedIn) onSignedIn();
+    else {
+      router.replace(next);
+      router.refresh();
+    }
+  }
 
   const callbackUrl = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
   async function sendMagicLink(e: React.FormEvent) {
     e.preventDefault();
     setStatus({ kind: "sending" });
+    await beforeLeave?.();
     const { error } = await createClient().auth.signInWithOtp({
       email: email.trim(),
       options: { emailRedirectTo: callbackUrl() },
@@ -22,6 +52,7 @@ export function LoginForm({ next }: { next: string }) {
   }
 
   async function signInWithGoogle() {
+    await beforeLeave?.();
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: callbackUrl() },
@@ -31,12 +62,36 @@ export function LoginForm({ next }: { next: string }) {
 
   if (status.kind === "sent") {
     return (
-      <div className="mt-8 rounded-2xl border border-line bg-panel p-5 frost">
+      <div className="mt-6 rounded-2xl border border-line bg-panel p-5 frost">
         <p className="font-display text-lg">Check your email</p>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          We sent a sign-in link to <span className="text-text">{status.email}</span>. Open it on this device or any
-          other. It expires in an hour.
+          We sent an email to <span className="text-text">{status.email}</span>. Type the code from it here
+          {onSignedIn ? " to keep going without leaving this page" : ", or click the link in the email"}. It expires in an hour.
         </p>
+        <form onSubmit={verifyCode} className="mt-4 flex gap-2">
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/D/g, "").slice(0, 10))}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            aria-label="Code from the email"
+            placeholder="Code"
+            autoFocus
+            className="min-w-0 flex-1 rounded-xl border border-line bg-code px-4 py-3 text-center text-lg tracking-[0.3em] outline-none transition-colors placeholder:text-base placeholder:tracking-normal placeholder:text-faint focus:border-accent"
+          />
+          <button
+            type="submit"
+            disabled={code.length < 6 || verifying}
+            className="rounded-xl bg-accent px-5 py-3 font-medium text-accent-contrast transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {verifying ? "Checking…" : "Continue"}
+          </button>
+        </form>
+        {codeError && (
+          <p role="alert" className="mt-2 text-sm text-mastery-low">
+            {codeError}
+          </p>
+        )}
         <button
           type="button"
           onClick={() => setStatus({ kind: "idle" })}
@@ -49,7 +104,7 @@ export function LoginForm({ next }: { next: string }) {
   }
 
   return (
-    <div className="mt-8 space-y-5">
+    <div className="mt-6 space-y-5">
       <button
         type="button"
         onClick={signInWithGoogle}

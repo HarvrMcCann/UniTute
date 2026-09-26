@@ -42,12 +42,17 @@ export default async function HomePage() {
             <p className="mt-5 max-w-[60ch] text-lg text-muted">
               Lessons, knowledge checks and an AI tutor, built from your own unit&rsquo;s slides and readings.
             </p>
-            <Link
-              href="/login"
-              className="mt-8 inline-flex rounded-xl bg-accent px-5 py-3 font-medium text-accent-contrast transition-opacity hover:opacity-90"
-            >
-              Sign in to save your progress
-            </Link>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                href="/upload"
+                className="pressable inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 font-medium text-accent-contrast transition-opacity hover:opacity-90"
+              >
+                <PlusIcon className="size-4" /> Make a course from your files
+              </Link>
+              <Link href="/login" className="pressable rounded-xl px-4 py-3 font-medium text-accent transition-colors hover:bg-hover">
+                Sign in
+              </Link>
+            </div>
           </>
         )}
 

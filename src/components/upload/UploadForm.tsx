@@ -1,10 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createDraftCourse, registerFiles, type UploadedFile } from "@/app/upload/actions";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { IconButton } from "@/components/ui/IconButton";
+import { clearDraft, loadDraft, saveDraft } from "@/lib/upload/draftStore";
 import { createClient } from "@/lib/supabase/browser";
+import { deriveTitle } from "@/lib/upload/deriveTitle";
 import { guessWeek } from "@/lib/upload/guessWeek";
+import { ChevronIcon, CloseIcon } from "@/components/ui/icons";
 import { countPages, kindOf, MIME_TYPES, rejectReason, type FileKind } from "@/lib/upload/inspectFile";
 import { DropZone } from "./DropZone";
 import { FileRow, type UploadState } from "./FileRow";
@@ -33,8 +38,17 @@ const UPLOAD_CONCURRENCY = 3;
 const byWeekThenName = (a: PickedFile, b: PickedFile) =>
   (a.week ?? 99) - (b.week ?? 99) || a.file.name.localeCompare(b.file.name, undefined, { numeric: true });
 
-export function UploadForm() {
+type UploadFormProps = {
+  signedIn: boolean;
+  /** Back from signing in with Google: restore the files saved before leaving. */
+  resume: boolean;
+};
+
+export function UploadForm({ signedIn: initiallySignedIn, resume }: UploadFormProps) {
   const router = useRouter();
+  const [signedIn, setSignedIn] = useState(initiallySignedIn);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [restored, setRestored] = useState(false);
   const [title, setTitle] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [university, setUniversity] = useState("");
@@ -44,6 +58,32 @@ export function UploadForm() {
   const [rejected, setRejected] = useState<{ name: string; reason: string }[]>([]);
   const [phase, setPhase] = useState<Phase>({ kind: "editing" });
   const [course, setCourse] = useState<{ courseId: string; userId: string } | null>(null);
+
+  // Returning from Google sign-in: put the saved files and choices back.
+  useEffect(() => {
+    if (!resume) return;
+    void loadDraft().then((draft) => {
+      if (!draft) return;
+      setTitle(draft.title);
+      setCourseCode(draft.courseCode);
+      setUniversity(draft.university);
+      setYear(draft.year);
+      setNotes(draft.notes);
+      setFiles(draft.files.map((f) => ({ ...f, kind: kindOf(f.file.name)! })));
+      setRestored(true);
+    });
+  }, [resume]);
+
+  function saveForLater() {
+    return saveDraft({
+      title,
+      courseCode,
+      university,
+      year,
+      notes,
+      files: files.map(({ id, file, box, week, pages, note }) => ({ id, file, box, week, pages, note })),
+    }).then(() => undefined);
+  }
 
   const busy = phase.kind === "working";
   const locked = busy || course !== null; // once the course exists, the file list is fixed
@@ -77,18 +117,23 @@ export function UploadForm() {
     for (const f of added) void countPages(f.file, f.kind).then((pages) => update(f.id, { pages }));
   }
 
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return setPhase({ kind: "error", message: "Give the course a name." });
     if (!files.some((f) => f.box === "content"))
       return setPhase({ kind: "error", message: "Add at least one file of lecture content." });
+    // Everything up to here works signed out; an account is needed before anything is uploaded.
+    // (Version 2: payment for processing is requested at this same point.)
+    if (!signedIn) return setAuthOpen(true);
+    void processFiles();
+  }
 
+  async function processFiles() {
     // 1. Create the course (only once, so retries reuse it)
     let ctx = course;
     if (!ctx) {
       setPhase({ kind: "working", label: "Creating your course…" });
       const created = await createDraftCourse({
-        title,
+        title: title.trim() || suggestedTitle,
         courseCode,
         university,
         year: year ? Number(year) : null,
@@ -147,8 +192,12 @@ export function UploadForm() {
       ),
     );
     if (!registered.ok) return setPhase({ kind: "error", message: registered.error });
+    await clearDraft();
     router.push(`/upload/${ctx.courseId}`);
   }
+
+  const suggestedTitle = deriveTitle(files.filter((f) => f.box === "content").map((f) => f.file.name));
+  const detailsSummary = [title.trim() || null, courseCode.trim() || null].filter(Boolean).join(" · ");
 
   const boxFiles = (box: Box) => files.filter((f) => f.box === box).sort(byWeekThenName);
   const noWeek = files.filter((f) => f.box === "content" && f.week === null).length;
@@ -179,35 +228,12 @@ export function UploadForm() {
 
   return (
     <form onSubmit={submit} className="space-y-5">
-      <section className="rounded-2xl border border-line bg-panel p-4 frost sm:p-5">
-        <h2 className="font-display text-lg">Course details</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="block sm:col-span-2">
-            <span className="text-sm text-muted">Course name</span>
-            <input
-              className={`${input} mt-1`}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Signals and Systems"
-              required
-              disabled={locked}
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm text-muted">Course code (optional)</span>
-            <input className={`${input} mt-1`} value={courseCode} onChange={(e) => setCourseCode(e.target.value)} placeholder="ENGR2722" disabled={locked} />
-          </label>
-          <label className="block">
-            <span className="text-sm text-muted">Year (optional)</span>
-            <input className={`${input} mt-1`} value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" disabled={locked} />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className="text-sm text-muted">University (optional)</span>
-            <input className={`${input} mt-1`} value={university} onChange={(e) => setUniversity(e.target.value)} placeholder="Flinders University" disabled={locked} />
-          </label>
-        </div>
-      </section>
-
+      {restored && (
+        <p role="status" className="rounded-xl bg-accent-soft px-4 py-3 text-sm">
+          {signedIn ? "You’re signed in and your" : "Your"} files are back. Press{" "}
+          <span className="font-medium">Upload</span> to continue.
+        </p>
+      )}
       <DropZone
         title="Lecture content"
         description="Lecture slides, readings and tutorial sheets. This is what your lessons are built from."
@@ -242,6 +268,42 @@ export function UploadForm() {
         </label>
       </section>
 
+      {/* Optional and closed by default: everything here has a sensible default */}
+      <details className="group rounded-2xl border border-line bg-panel frost">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5 [&::-webkit-details-marker]:hidden">
+          <ChevronIcon className="size-4 shrink-0 text-faint transition-transform group-open:rotate-90" />
+          <span className="font-display text-lg">Course details</span>
+          <span className="min-w-0 flex-1 truncate text-right text-sm text-faint">
+            {detailsSummary || "Optional"}
+          </span>
+        </summary>
+        <div className="grid gap-3 px-4 pb-5 sm:grid-cols-2 sm:px-5">
+          <label className="block sm:col-span-2">
+            <span className="text-sm text-muted">Course name</span>
+            <input
+              className={`${input} mt-1`}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={suggestedTitle}
+              disabled={locked}
+            />
+            <span className="mt-1 block text-xs text-faint">Leave blank to use the name shown, taken from your files.</span>
+          </label>
+          <label className="block">
+            <span className="text-sm text-muted">Course code</span>
+            <input className={`${input} mt-1`} value={courseCode} onChange={(e) => setCourseCode(e.target.value)} placeholder="ENGR2722" disabled={locked} />
+          </label>
+          <label className="block">
+            <span className="text-sm text-muted">Year</span>
+            <input className={`${input} mt-1`} value={year} onChange={(e) => setYear(e.target.value.replace(/D/g, "").slice(0, 4))} inputMode="numeric" disabled={locked} />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="text-sm text-muted">University</span>
+            <input className={`${input} mt-1`} value={university} onChange={(e) => setUniversity(e.target.value)} placeholder="Flinders University" disabled={locked} />
+          </label>
+        </div>
+      </details>
+
       {rejected.length > 0 && (
         <div role="alert" className="rounded-xl bg-mastery-low/10 px-4 py-3 text-sm">
           <p className="font-medium text-mastery-low">Some files weren&rsquo;t added:</p>
@@ -273,6 +335,40 @@ export function UploadForm() {
           </p>
         )}
       </div>
+
+      {authOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+          <div className="absolute inset-0 bg-scrim" onClick={() => setAuthOpen(false)} />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auth-title"
+            className="relative max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-line bg-panel-solid p-5 shadow-2xl sm:rounded-3xl sm:p-6"
+          >
+            <div className="absolute right-3 top-3">
+              <IconButton label="Close" size="sm" onClick={() => setAuthOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </div>
+            <h2 id="auth-title" className="pr-10 font-display text-2xl">
+              Create your free account
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Your {files.length} file{files.length === 1 ? " is" : "s are"} ready. Sign in or create an account so we can
+              process {files.length === 1 ? "it" : "them"} and save your course and progress.
+            </p>
+            <LoginForm
+              next="/upload?resume=1"
+              beforeLeave={saveForLater}
+              onSignedIn={() => {
+                setSignedIn(true);
+                setAuthOpen(false);
+                void processFiles();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </form>
   );
 }
