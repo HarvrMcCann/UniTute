@@ -1,15 +1,30 @@
 import { notFound } from "next/navigation";
 import { ClassroomShell } from "@/components/classroom/ClassroomShell";
-import { getCourse, listCourses, outlineOf } from "@/lib/course/load";
-
-export function generateStaticParams() {
-  return listCourses().map((c) => ({ courseId: c.id }));
-}
+import { ProgressProvider } from "@/components/classroom/ProgressContext";
+import { getCourse, outlineOf } from "@/lib/course/load";
+import { getCourseProgress } from "@/lib/progress";
+import { getProfile, getUser } from "@/lib/supabase/server";
 
 export default async function CourseLayout({ children, params }: LayoutProps<"/course/[courseId]">) {
   const { courseId } = await params;
-  const course = getCourse(courseId);
-  if (!course) notFound();
+  const loaded = await getCourse(courseId);
+  if (!loaded) notFound();
 
-  return <ClassroomShell outline={outlineOf(course)}>{children}</ClassroomShell>;
+  const [user, profile, progress] = await Promise.all([
+    getUser(),
+    getProfile(),
+    getCourseProgress(courseId, loaded.lessonIds),
+  ]);
+  const completed = [...progress.byLesson].filter(([, p]) => p.completed).map(([key]) => key);
+
+  return (
+    <ProgressProvider userId={user?.id ?? null} initialCompleted={completed}>
+      <ClassroomShell
+        outline={outlineOf(loaded.course)}
+        account={user ? { email: user.email, displayName: profile?.displayName ?? null } : null}
+      >
+        {children}
+      </ClassroomShell>
+    </ProgressProvider>
+  );
 }

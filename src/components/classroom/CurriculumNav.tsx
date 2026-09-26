@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeftIcon, ChevronIcon } from "@/components/ui/icons";
+import { ArrowLeftIcon, CheckIcon, ChevronIcon } from "@/components/ui/icons";
 import type { CourseOutline } from "@/lib/course/load";
+import { useProgress } from "./ProgressContext";
 
 type CurriculumNavProps = {
   outline: CourseOutline;
@@ -12,6 +13,7 @@ type CurriculumNavProps = {
 };
 
 export function CurriculumNav({ outline, currentLessonId, onNavigate }: CurriculumNavProps) {
+  const { completed } = useProgress();
   const [collapsedUnits, setCollapsedUnits] = useState<Set<string>>(new Set());
   const lessonNumbers = new Map(
     outline.units.flatMap((u) => u.lessons).map((lesson, i) => [lesson.id, i + 1]),
@@ -67,6 +69,7 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
               <ul className={collapsed ? "hidden" : "mt-0.5 space-y-0.5"}>
                 {unit.lessons.map((lesson) => {
                   const current = lesson.id === currentLessonId;
+                  const done = completed.has(lesson.id);
                   return (
                     <li key={lesson.id}>
                       <Link
@@ -77,13 +80,20 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
                           current ? "bg-accent-soft text-text" : "text-muted hover:bg-hover hover:text-text"
                         }`}
                       >
-                        <span
-                          className={`mt-px w-4 shrink-0 text-right text-xs tabular-nums ${
-                            current ? "text-accent" : "text-faint"
-                          }`}
-                        >
-                          {lessonNumbers.get(lesson.id)}
-                        </span>
+                        {done ? (
+                          <span className="mt-px grid size-4 shrink-0 place-items-center rounded-full bg-accent text-accent-contrast">
+                            <CheckIcon className="size-3" />
+                            <span className="sr-only">Completed:</span>
+                          </span>
+                        ) : (
+                          <span
+                            className={`mt-px w-4 shrink-0 text-right text-xs tabular-nums ${
+                              current ? "text-accent" : "text-faint"
+                            }`}
+                          >
+                            {lessonNumbers.get(lesson.id)}
+                          </span>
+                        )}
                         <span className="min-w-0 flex-1 leading-snug">{lesson.title}</span>
                         <span className="shrink-0 text-xs text-faint">{lesson.estMinutes}m</span>
                       </Link>

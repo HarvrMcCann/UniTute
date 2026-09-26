@@ -4,19 +4,31 @@ import { ArrowLeftIcon, ArrowRightIcon, ClockIcon } from "@/components/ui/icons"
 import type { LessonLocation } from "@/lib/course/load";
 import type { Course } from "@/lib/course/schema";
 import { FadeIn } from "./FadeIn";
+import { LESSON_END_ID, ProgressTracker } from "./ProgressTracker";
 
 type LessonViewProps = {
   course: Course;
   location: LessonLocation;
+  lessonDbId: string;
+  resumeBlockId: string | null;
 };
 
-export function LessonView({ course, location }: LessonViewProps) {
+export function LessonView({ course, location, lessonDbId, resumeBlockId }: LessonViewProps) {
   const { unit, lesson, prev, next, number, total } = location;
   const questions = new Map(lesson.questions.map((q) => [q.id, q]));
   const conceptNames = new Map(course.concepts.map((c) => [c.id, c.name]));
 
   return (
-    <FadeIn key={lesson.id}>
+    <>
+      {/* Outside FadeIn: its transform would break the tracker's fixed-position chip */}
+      <ProgressTracker
+        key={lesson.id}
+        courseId={course.id}
+        lessonKey={lesson.id}
+        lessonDbId={lessonDbId}
+        resumeBlockId={resumeBlockId}
+      />
+      <FadeIn key={lesson.id}>
       <article className="mx-auto max-w-[720px] px-4 pb-24 pt-6 sm:px-6 sm:pt-10">
         <header>
           <p className="text-sm text-muted">
@@ -51,7 +63,7 @@ export function LessonView({ course, location }: LessonViewProps) {
           ))}
         </div>
 
-        <nav aria-label="Lesson navigation" className="mt-14 grid gap-3 sm:grid-cols-2">
+        <nav id={LESSON_END_ID} aria-label="Lesson navigation" className="mt-14 grid gap-3 sm:grid-cols-2">
           {prev ? (
             <LessonLink href={`/course/${course.id}/${prev.id}`} label="Previous" title={prev.title} direction="prev" />
           ) : (
@@ -64,7 +76,8 @@ export function LessonView({ course, location }: LessonViewProps) {
           )}
         </nav>
       </article>
-    </FadeIn>
+      </FadeIn>
+    </>
   );
 }
 

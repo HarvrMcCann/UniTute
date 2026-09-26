@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import { BackgroundBlobs } from "@/components/ui/BackgroundBlobs";
 import { MotionProvider } from "@/components/ui/MotionProvider";
-import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
+import { getProfile } from "@/lib/supabase/server";
+import { themeBootstrapScript } from "@/lib/theme";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -20,11 +21,13 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const profile = await getProfile();
+
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning className={`${inter.variable} ${fraunces.variable}`}>
+    <html lang="en" data-theme={profile?.theme ?? "dark"} suppressHydrationWarning className={`${inter.variable} ${fraunces.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript(profile?.theme ?? null) }} />
       </head>
       <body className="min-h-dvh">
         <BackgroundBlobs />

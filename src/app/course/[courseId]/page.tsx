@@ -1,11 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { allLessons, getCourse } from "@/lib/course/load";
+import { getCourseProgress } from "@/lib/progress";
 
-// Phase 3 will resume at the last-visited lesson instead of the first.
+/** Opens the lesson you were last in (signed in), otherwise the first lesson. */
 export default async function CoursePage({ params }: PageProps<"/course/[courseId]">) {
   const { courseId } = await params;
-  const course = getCourse(courseId);
-  if (!course) notFound();
+  const loaded = await getCourse(courseId);
+  if (!loaded) notFound();
 
-  redirect(`/course/${course.id}/${allLessons(course)[0].id}`);
+  const progress = await getCourseProgress(courseId, loaded.lessonIds);
+  const lessonKey = progress.lastVisited ?? allLessons(loaded.course)[0].id;
+  redirect(`/course/${courseId}/${lessonKey}`);
 }

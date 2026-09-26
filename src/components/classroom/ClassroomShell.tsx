@@ -2,12 +2,14 @@
 
 import { AnimatePresence, motion, useDragControls } from "motion/react";
 import { useParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { AccountMenu, type Account } from "@/components/auth/AccountMenu";
 import { IconButton } from "@/components/ui/IconButton";
 import { ChatIcon, CloseIcon, MenuIcon, SidebarIcon } from "@/components/ui/icons";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { CourseOutline } from "@/lib/course/load";
 import { CurriculumNav } from "./CurriculumNav";
+import { LESSON_SCROLL_ID } from "./ProgressTracker";
 import { TutorPanel } from "./TutorPanel";
 
 const DESKTOP = "(min-width: 1024px)"; // lg: three columns
@@ -29,7 +31,13 @@ const TUTOR_PANEL_CLASSES: Record<TutorPanelMode, string> = {
 
 const panel = "rounded-2xl border border-line bg-panel backdrop-blur-xl";
 
-export function ClassroomShell({ outline, children }: { outline: CourseOutline; children: React.ReactNode }) {
+type ClassroomShellProps = {
+  outline: CourseOutline;
+  account: Account | null;
+  children: React.ReactNode;
+};
+
+export function ClassroomShell({ outline, account, children }: ClassroomShellProps) {
   const { lessonId } = useParams<{ lessonId?: string }>();
   const lessonTitle = outline.units.flatMap((u) => u.lessons).find((l) => l.id === lessonId)?.title;
 
@@ -38,13 +46,7 @@ export function ClassroomShell({ outline, children }: { outline: CourseOutline; 
   const [tutorMode, setTutorMode] = useState<TutorPanelMode>("auto"); // tablet + desktop
   const [sheetOpen, setSheetOpen] = useState(false); // phone
 
-  const mainRef = useRef<HTMLElement>(null);
   const sheetDrag = useDragControls();
-
-  // New lesson: start at the top (the lesson column scrolls, not the window).
-  useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0 });
-  }, [lessonId]);
 
   // Escape closes overlays.
   useEffect(() => {
@@ -96,6 +98,7 @@ export function ClassroomShell({ outline, children }: { outline: CourseOutline; 
         <IconButton label="Toggle tutor" onClick={toggleTutor}>
           <ChatIcon />
         </IconButton>
+        <AccountMenu account={account} />
       </header>
 
       <div className="flex min-h-0 flex-1 gap-3 px-0 sm:px-3 sm:pb-3">
@@ -118,7 +121,8 @@ export function ClassroomShell({ outline, children }: { outline: CourseOutline; 
         </AnimatePresence>
 
         {/* Lesson */}
-        <main ref={mainRef} className="scroll-thin min-w-0 flex-1 overflow-y-auto">
+        {/* Scroll position is restored and tracked by ProgressTracker */}
+        <main id={LESSON_SCROLL_ID} className="scroll-thin min-w-0 flex-1 overflow-y-auto">
           {children}
         </main>
 
