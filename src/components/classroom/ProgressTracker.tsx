@@ -23,7 +23,7 @@ type ProgressTrackerProps = {
  * Also restores the scroll position when a lesson opens.
  */
 export function ProgressTracker({ courseId, lessonKey, lessonDbId, resumeBlockId }: ProgressTrackerProps) {
-  const { userId, markCompleted } = useProgress();
+  const { userId, markScrolled } = useProgress();
   const [showResumed, setShowResumed] = useState(resumeBlockId !== null);
   const pending = useRef<string | null>(null);
 
@@ -84,7 +84,7 @@ export function ProgressTracker({ courseId, lessonKey, lessonDbId, resumeBlockId
       ([entry]) => {
         if (!entry.isIntersecting || completed) return;
         completed = true;
-        markCompleted(lessonKey);
+        markScrolled(lessonKey);
         void save({ completed: true });
       },
       { root: container },
@@ -101,7 +101,7 @@ export function ProgressTracker({ courseId, lessonKey, lessonDbId, resumeBlockId
       endObserver.disconnect();
       document.removeEventListener("visibilitychange", onHide);
     };
-  }, [userId, courseId, lessonKey, lessonDbId, resumeBlockId, markCompleted]);
+  }, [userId, courseId, lessonKey, lessonDbId, resumeBlockId, markScrolled]);
 
   return (
     <AnimatePresence>

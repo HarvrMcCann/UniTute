@@ -5,7 +5,13 @@ import { useState } from "react";
 import { LinkPending } from "@/components/ui/LinkPending";
 import { ArrowLeftIcon, ChevronIcon } from "@/components/ui/icons";
 import type { CourseOutline } from "@/lib/course/load";
-import { useProgress } from "./ProgressContext";
+import { useProgress, type LessonStatus } from "./ProgressContext";
+
+const STATUS_LABEL: Record<LessonStatus, string> = {
+  none: "",
+  read: " (read, checks not finished)",
+  done: " (completed)",
+};
 
 type CurriculumNavProps = {
   outline: CourseOutline;
@@ -14,7 +20,7 @@ type CurriculumNavProps = {
 };
 
 export function CurriculumNav({ outline, currentLessonId, onNavigate }: CurriculumNavProps) {
-  const { completed } = useProgress();
+  const { statusOf } = useProgress();
   const [collapsedUnits, setCollapsedUnits] = useState<Set<string>>(new Set());
   const lessonNumbers = new Map(
     outline.units.flatMap((u) => u.lessons).map((lesson, i) => [lesson.id, i + 1]),
@@ -70,7 +76,7 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
               <ul className={collapsed ? "hidden" : "mt-0.5 space-y-0.5"}>
                 {unit.lessons.map((lesson) => {
                   const current = lesson.id === currentLessonId;
-                  const done = completed.has(lesson.id);
+                  const status = statusOf(lesson.id);
                   return (
                     <li key={lesson.id}>
                       <Link
@@ -81,18 +87,24 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
                           current ? "bg-accent-soft text-text" : "text-muted hover:bg-hover hover:text-text"
                         }`}
                       >
-                        {/* Lesson number; a completed lesson gets a filled accent ring around it */}
+                        {/*
+                          Lesson number in a fixed 20px circle. The border is always there (transparent
+                          when unused) so the number sits in exactly the same place in every state.
+                          none: plain number · read: hollow green ring · done: filled green circle
+                        */}
                         <span
-                          className={`mt-px grid size-[1.125rem] shrink-0 place-items-center rounded-full text-[0.65rem] font-semibold tabular-nums ${
-                            done
-                              ? "bg-accent-soft text-accent ring-[1.5px] ring-accent"
-                              : current
-                                ? "text-accent"
-                                : "text-faint"
+                          className={`mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full border-[1.5px] text-[0.625rem] font-semibold leading-none tabular-nums ${
+                            status === "done"
+                              ? "border-progress bg-progress text-progress-contrast"
+                              : status === "read"
+                                ? "border-progress text-text"
+                                : current
+                                  ? "border-transparent text-accent"
+                                  : "border-transparent text-faint"
                           }`}
                         >
                           {lessonNumbers.get(lesson.id)}
-                          {done && <span className="sr-only"> (completed)</span>}
+                          <span className="sr-only">{STATUS_LABEL[status]}</span>
                         </span>
                         <span className="min-w-0 flex-1 leading-snug">{lesson.title}</span>
                         <span className="shrink-0 text-xs text-faint">{lesson.estMinutes}m</span>

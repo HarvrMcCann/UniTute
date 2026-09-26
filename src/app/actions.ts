@@ -46,3 +46,17 @@ export async function saveProgress(update: ProgressUpdate) {
   const { error } = await supabase.from("lesson_progress").upsert(row);
   if (error) console.warn("Couldn't save progress:", error.message);
 }
+
+/**
+ * Records a finished knowledge check. `correct` means right on the first try
+ * (revealing the answer, or getting it right after a mistake, counts as not correct).
+ */
+export async function recordAttempt(questionDbId: string, correct: boolean) {
+  const user = await getUser();
+  if (!user) return;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("attempts")
+    .insert({ user_id: user.id, question_id: questionDbId, correct: Boolean(correct) });
+  if (error) console.warn("Couldn't record attempt:", error.message);
+}

@@ -14,6 +14,8 @@ export type LoadedCourse = {
   course: Course;
   /** Course-JSON lesson key -> database UUID (progress rows reference the UUID). */
   lessonIds: Map<string, string>;
+  /** Course-JSON question key -> database UUID (attempts reference the UUID). */
+  questionIds: Map<string, string>;
 };
 
 type Keyed = { id: string; key: string };
@@ -37,7 +39,7 @@ export const getCourse = cache(async (courseId: string): Promise<LoadedCourse | 
     supabase.from("concepts").select("id, key, name, description").eq("course_id", courseId),
     supabase
       .from("questions")
-      .select("key, lesson_id, concept_id, position, type, prompt, options, answer, explanation")
+      .select("id, key, lesson_id, concept_id, position, type, prompt, options, answer, explanation")
       .eq("course_id", courseId),
   ]);
   for (const r of [units, lessons, concepts, questions]) if (r.error) throw new Error(r.error.message);
@@ -72,6 +74,7 @@ export const getCourse = cache(async (courseId: string): Promise<LoadedCourse | 
   return {
     course: rowsToCourse(rows),
     lessonIds: new Map([...lessonKey].map(([id, key]) => [key, id])),
+    questionIds: new Map((questions.data as Keyed[]).map((q) => [q.key, q.id])),
   };
 });
 

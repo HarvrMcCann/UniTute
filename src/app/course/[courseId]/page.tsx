@@ -8,7 +8,7 @@ export default async function CoursePage({ params }: PageProps<"/course/[courseI
   const loaded = await getCourse(courseId);
   if (!loaded) notFound();
 
-  const progress = await getCourseProgress(courseId, loaded.lessonIds);
+  const progress = await getCourseProgress(loaded);
   const lessonKey = progress.lastVisited ?? allLessons(loaded.course)[0].id;
   redirect(`/course/${courseId}/${lessonKey}`);
 }

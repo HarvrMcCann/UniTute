@@ -11,18 +11,20 @@ import { WorkedExampleBlock } from "./WorkedExampleBlock";
 type BlockRendererProps = {
   block: Block;
   questions: Map<string, Question>;
+  /** Question key -> database UUID, for recording attempts. */
+  questionIds: Map<string, string>;
 };
 
 /** Wraps each block in an anchor (its stable id) so tutor links, progress and bug reports can point at it. */
-export function BlockRenderer({ block, questions }: BlockRendererProps) {
+export function BlockRenderer({ block, questions, questionIds }: BlockRendererProps) {
   return (
     <section id={block.id} data-block-id={block.id} className="scroll-mt-24">
-      <BlockContent block={block} questions={questions} />
+      <BlockContent block={block} questions={questions} questionIds={questionIds} />
     </section>
   );
 }
 
-function BlockContent({ block, questions }: BlockRendererProps) {
+function BlockContent({ block, questions, questionIds }: BlockRendererProps) {
   switch (block.type) {
     case "text":
       return <Markdown>{block.markdown}</Markdown>;
@@ -42,7 +44,7 @@ function BlockContent({ block, questions }: BlockRendererProps) {
       return <SummaryBlock block={block} />;
     case "check": {
       const question = questions.get(block.questionId);
-      return question ? <CheckBlock question={question} /> : null;
+      return question ? <CheckBlock question={question} questionDbId={questionIds.get(question.id)!} /> : null;
     }
   }
 }

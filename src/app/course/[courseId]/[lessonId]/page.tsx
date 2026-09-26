@@ -17,7 +17,7 @@ export default async function LessonPage({ params }: PageProps<"/course/[courseI
   const location = loaded && locateLesson(loaded.course, lessonId);
   if (!loaded || !location) notFound();
 
-  const progress = await getCourseProgress(courseId, loaded.lessonIds);
+  const progress = await getCourseProgress(loaded);
   const saved = progress.byLesson.get(lessonId);
   // Finished lessons reopen at the top; unfinished ones where you left off.
   const firstBlockId = location.lesson.blocks[0].id;
@@ -29,6 +29,7 @@ export default async function LessonPage({ params }: PageProps<"/course/[courseI
       course={loaded.course}
       location={location}
       lessonDbId={loaded.lessonIds.get(lessonId)!}
+      questionIds={loaded.questionIds}
       resumeBlockId={resumeBlockId}
     />
   );

@@ -10,10 +10,10 @@ type TutorPanelProps = {
 export function TutorPanel({ lessonTitle, onClose }: TutorPanelProps) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-line py-2 pl-4 pr-2">
+      <div className="flex items-center gap-2 border-b border-line py-1 pl-4 pr-1.5">
         <SparkIcon className="size-4 text-accent" />
-        <p className="flex-1 font-display text-lg">Tutor</p>
-        <IconButton label="Close tutor" onClick={onClose}>
+        <p className="flex-1 font-display text-base">Tutor</p>
+        <IconButton label="Close tutor" onClick={onClose} size="sm">
           <CloseIcon />
         </IconButton>
       </div>
@@ -39,7 +39,7 @@ export function TutorPanel({ lessonTitle, onClose }: TutorPanelProps) {
             placeholder="Ask a question…"
             className="max-h-32 flex-1 resize-none bg-transparent py-1.5 text-base outline-none placeholder:text-faint"
           />
-          <IconButton label="Send" disabled className="size-9">
+          <IconButton label="Send" disabled size="sm">
             <SendIcon className="size-4" />
           </IconButton>
         </div>

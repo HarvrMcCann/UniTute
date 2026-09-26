@@ -17,6 +17,9 @@
   --accent-contrast: #0e1320;
   --panel: rgb(255 255 255 / 0.05);
   --panel-strong: rgb(20 26 42 / 0.92);
+  --panel-solid: #151b2a; /* opaque overlays (drawer, tutor sheet) on phones */
+  --progress: #6fb58a;
+  --progress-contrast: #0e1320; /* number on a filled progress circle */
   --panel-border: rgb(255 255 255 / 0.08);
   --hover: rgb(255 255 255 / 0.06);
   --code-bg: rgb(0 0 0 / 0.28);
@@ -44,6 +47,9 @@
   --accent-contrast: #ffffff;
   --panel: rgb(255 255 255 / 0.7);
   --panel-strong: rgb(252 251 248 / 0.96);
+  --panel-solid: #fcfbf8;
+  --progress: #2f8a55;
+  --progress-contrast: #ffffff;
   --panel-border: rgb(27 32 48 / 0.08);
   --hover: rgb(27 32 48 / 0.05);
   --code-bg: rgb(27 32 48 / 0.05);
@@ -71,6 +77,9 @@
   --color-accent-contrast: var(--accent-contrast);
   --color-panel: var(--panel);
   --color-panel-strong: var(--panel-strong);
+  --color-panel-solid: var(--panel-solid);
+  --color-progress: var(--progress);
+  --color-progress-contrast: var(--progress-contrast);
   --color-line: var(--panel-border);
   --color-hover: var(--hover);
   --color-code: var(--code-bg);

@@ -10,8 +10,9 @@ const TYPE_LABELS: Record<Question["type"], string> = {
 };
 
 /** Server part of a knowledge check: renders all markdown, then hands the nodes to a client component. */
-export function CheckBlock({ question }: { question: Question }) {
+export function CheckBlock({ question, questionDbId }: { question: Question; questionDbId: string }) {
   const explanation = <Markdown>{question.explanation}</Markdown>;
+  const ids = { questionKey: question.id, questionDbId };
 
   return (
     <div className="rounded-2xl border border-line bg-panel p-5 frost sm:p-6">
@@ -24,6 +25,7 @@ export function CheckBlock({ question }: { question: Question }) {
       <div className="mt-4">
         {question.type === "multipleChoice" && (
           <MultipleChoiceCheck
+            {...ids}
             options={question.options.map((o, i) => (
               <Markdown key={i} inline>
                 {o}
@@ -34,10 +36,11 @@ export function CheckBlock({ question }: { question: Question }) {
           />
         )}
         {question.type === "shortAnswer" && (
-          <ShortAnswerCheck modelAnswer={<Markdown>{question.modelAnswer}</Markdown>} explanation={explanation} />
+          <ShortAnswerCheck {...ids} modelAnswer={<Markdown>{question.modelAnswer}</Markdown>} explanation={explanation} />
         )}
         {question.type === "ordering" && (
           <OrderingCheck
+            {...ids}
             items={question.items.map((item, i) => (
               <Markdown key={i} inline>
                 {item}

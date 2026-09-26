@@ -128,7 +128,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
         {/* With the phone tutor sheet open, pad the bottom so the whole lesson can still scroll into view above it */}
         <main
           id={LESSON_SCROLL_ID}
-          className={`scroll-thin min-w-0 flex-1 overflow-y-auto ${sheetOpen ? "max-md:pb-[50dvh]" : ""}`}
+          className={`scroll-thin min-w-0 flex-1 overflow-y-auto ${sheetOpen ? "max-md:pb-[60dvh]" : ""}`}
         >
           {children}
         </main>
@@ -169,7 +169,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
               role="dialog"
               aria-modal="true"
               aria-label="Curriculum"
-              className="absolute inset-y-0 left-0 flex w-[85vw] max-w-[320px] flex-col border-r border-line bg-panel-strong"
+              className="absolute inset-y-0 left-0 flex w-[85vw] max-w-[320px] flex-col border-r border-line bg-panel-solid"
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
@@ -191,15 +191,16 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
       </AnimatePresence>
 
       {/* Tutor bottom sheet (phone). Not modal: it covers the lower half and the lesson
-          above stays scrollable, so you can read while writing a question. */}
+          above stays scrollable, so you can read while writing a question. Opaque so the lesson
+          behind never hurts legibility (and costs nothing to draw, unlike a blur). */}
       <AnimatePresence>
         {sheetOpen && (
           <motion.div
             role="dialog"
             aria-label="Tutor"
-            className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-3xl border-t border-line bg-panel-strong shadow-[0_-8px_30px_rgb(0_0_0/0.25)] md:hidden"
-            initial={{ y: "100%", height: "50dvh" }}
-            animate={{ y: 0, height: sheetExpanded ? "88dvh" : "50dvh" }}
+            className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-3xl border-t border-line bg-panel-solid shadow-[0_-8px_30px_rgb(0_0_0/0.25)] md:hidden"
+            initial={{ y: "100%", height: "60dvh" }}
+            animate={{ y: 0, height: sheetExpanded ? "88dvh" : "60dvh" }}
             exit={{ y: "100%" }}
             transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
             drag="y"
@@ -219,7 +220,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
             <button
               type="button"
               aria-label={sheetExpanded ? "Shrink tutor" : "Expand tutor"}
-              className="flex w-full cursor-grab touch-none justify-center pb-1.5 pt-3 active:transform-none"
+              className="flex w-full cursor-grab touch-none justify-center pb-0.5 pt-2 active:transform-none"
               onPointerDown={(e) => sheetDrag.start(e)}
               onClick={() => setSheetExpanded((x) => !x)}
             >

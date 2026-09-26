@@ -1,10 +1,33 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { recordAttempt } from "@/app/actions";
+import { useProgress } from "@/components/classroom/ProgressContext";
 import { CheckIcon, CloseIcon, DownIcon, UpIcon } from "@/components/ui/icons";
 
-// Phase 6 will record attempts and update mastery. For now checks are local to the page.
+// ---------- Recording ----------
+
+type QuestionIds = { questionKey: string; questionDbId: string };
+
+/**
+ * Returns finish(correct): call once when a check is finished (solved, answer revealed or
+ * self-marked). Saves an attempt when signed in and updates the sidebar straight away.
+ * `correct` = right on the first try. Phase 6 builds mastery on these attempts.
+ */
+function useFinish({ questionKey, questionDbId }: QuestionIds) {
+  const { userId, markAnswered } = useProgress();
+  const done = useRef(false);
+  return useCallback(
+    (correct: boolean) => {
+      if (done.current) return;
+      done.current = true;
+      markAnswered(questionKey);
+      if (userId) void recordAttempt(questionDbId, correct).catch(() => {});
+    },
+    [userId, markAnswered, questionKey, questionDbId],
+  );
+}
 
 // ---------- Shared pieces ----------
 
@@ -82,23 +105,35 @@ function Feedback({ correct, title, children }: FeedbackProps) {
 
 // ---------- Multiple choice ----------
 
-type MultipleChoiceProps = {
+type MultipleChoiceProps = QuestionIds & {
   options: React.ReactNode[];
   answerIndex: number;
   explanation: React.ReactNode;
 };
 
-export function MultipleChoiceCheck({ options, answerIndex, explanation }: MultipleChoiceProps) {
+export function MultipleChoiceCheck({ options, answerIndex, explanation, ...ids }: MultipleChoiceProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [mistakes, setMistakes] = useState(0);
+  const finish = useFinish(ids);
 
   const correct = checked && selected === answerIndex;
   const locked = checked;
 
   function check() {
     setChecked(true);
-    if (selected === answerIndex) setRevealed(true);
+    if (selected === answerIndex) {
+      setRevealed(true);
+      finish(mistakes === 0);
+    } else {
+      setMistakes((m) => m + 1);
+    }
+  }
+
+  function reveal() {
+    setRevealed(true);
+    finish(false);
   }
 
   function retry() {
@@ -156,7 +191,7 @@ export function MultipleChoiceCheck({ options, answerIndex, explanation }: Multi
         <Feedback correct={false} title="Not quite. Have another go?">
           <div className="flex flex-wrap gap-2">
             <PrimaryButton onClick={retry}>Try again</PrimaryButton>
-            <GhostButton onClick={() => setRevealed(true)}>Show answer</GhostButton>
+            <GhostButton onClick={reveal}>Show answer</GhostButton>
           </div>
         </Feedback>
       )}
@@ -172,12 +207,13 @@ export function MultipleChoiceCheck({ options, answerIndex, explanation }: Multi
 
 // ---------- Short answer ----------
 
-type ShortAnswerProps = {
+type ShortAnswerProps = QuestionIds & {
   modelAnswer: React.ReactNode;
   explanation: React.ReactNode;
 };
 
-export function ShortAnswerCheck({ modelAnswer, explanation }: ShortAnswerProps) {
+export function ShortAnswerCheck({ modelAnswer, explanation, ...ids }: ShortAnswerProps) {
+  const finish = useFinish(ids);
   const [answer, setAnswer] = useState("");
   const [revealed, setRevealed] = useState(false);
   const [selfMark, setSelfMark] = useState<"got" | "notYet" | null>(null);
@@ -217,8 +253,22 @@ export function ShortAnswerCheck({ modelAnswer, explanation }: ShortAnswerProps)
           {selfMark === null ? (
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="text-sm text-muted">How did you go?</span>
-              <PrimaryButton onClick={() => setSelfMark("got")}>I got it</PrimaryButton>
-              <GhostButton onClick={() => setSelfMark("notYet")}>Not yet</GhostButton>
+              <PrimaryButton
+                onClick={() => {
+                  setSelfMark("got");
+                  finish(true);
+                }}
+              >
+                I got it
+              </PrimaryButton>
+              <GhostButton
+                onClick={() => {
+                  setSelfMark("notYet");
+                  finish(false);
+                }}
+              >
+                Not yet
+              </GhostButton>
             </div>
           ) : selfMark === "got" ? (
             <Feedback correct title="Nice work!" />
@@ -235,17 +285,19 @@ export function ShortAnswerCheck({ modelAnswer, explanation }: ShortAnswerProps)
 
 // ---------- Ordering ----------
 
-type OrderingProps = {
+type OrderingProps = QuestionIds & {
   items: React.ReactNode[];
   /** Shuffled indices into `items`; the correct order is 0, 1, 2… */
   initialOrder: number[];
   explanation: React.ReactNode;
 };
 
-export function OrderingCheck({ items, initialOrder, explanation }: OrderingProps) {
+export function OrderingCheck({ items, initialOrder, explanation, ...ids }: OrderingProps) {
   const [order, setOrder] = useState(initialOrder);
   const [checked, setChecked] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [mistakes, setMistakes] = useState(0);
+  const finish = useFinish(ids);
 
   const inPlace = order.filter((item, position) => item === position).length;
   const allCorrect = inPlace === order.length;
@@ -261,13 +313,19 @@ export function OrderingCheck({ items, initialOrder, explanation }: OrderingProp
 
   function check() {
     setChecked(true);
-    if (allCorrect) setRevealed(true);
+    if (allCorrect) {
+      setRevealed(true);
+      finish(mistakes === 0);
+    } else {
+      setMistakes((m) => m + 1);
+    }
   }
 
   function showAnswer() {
     setOrder(order.map((_, i) => i));
     setChecked(false); // revealed, not earned
     setRevealed(true);
+    finish(false);
   }
 
   return (

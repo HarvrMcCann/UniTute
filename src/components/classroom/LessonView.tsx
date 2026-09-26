@@ -11,10 +11,11 @@ type LessonViewProps = {
   course: Course;
   location: LessonLocation;
   lessonDbId: string;
+  questionIds: Map<string, string>;
   resumeBlockId: string | null;
 };
 
-export function LessonView({ course, location, lessonDbId, resumeBlockId }: LessonViewProps) {
+export function LessonView({ course, location, lessonDbId, questionIds, resumeBlockId }: LessonViewProps) {
   const { unit, lesson, prev, next, number, total } = location;
   const questions = new Map(lesson.questions.map((q) => [q.id, q]));
   const conceptNames = new Map(course.concepts.map((c) => [c.id, c.name]));
@@ -60,7 +61,7 @@ export function LessonView({ course, location, lessonDbId, resumeBlockId }: Less
 
         <div className="mt-10 space-y-6">
           {lesson.blocks.map((block) => (
-            <BlockRenderer key={block.id} block={block} questions={questions} />
+            <BlockRenderer key={block.id} block={block} questions={questions} questionIds={questionIds} />
           ))}
         </div>
 
