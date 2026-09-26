@@ -106,6 +106,27 @@ export const listCourses = cache(async (): Promise<CourseSummary[]> => {
   }));
 });
 
+export type DraftCourse = { id: string; title: string; courseCode: string | null; status: string; fileCount: number };
+
+/** The signed-in user's courses that aren't generated yet (uploading, reading files, ...). */
+export const listDraftCourses = cache(async (): Promise<DraftCourse[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("courses")
+    .select("id, title, course_code, status, source_files(count)")
+    .eq("is_sample", false)
+    .neq("status", "ready")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data.map((c) => ({
+    id: c.id,
+    title: c.title,
+    courseCode: c.course_code,
+    status: c.status,
+    fileCount: (c.source_files as unknown as { count: number }[])[0]?.count ?? 0,
+  }));
+});
+
 // ---------- Pure helpers over a loaded course ----------
 
 export type LessonLocation = {

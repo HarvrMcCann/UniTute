@@ -9,14 +9,19 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "seed": "tsx --env-file=.env.local scripts/seedSampleCourse.ts"
+    "seed": "tsx --env-file=.env.local scripts/seedSampleCourse.ts",
+    "inngest": "inngest-cli dev -u http://localhost:3000/api/inngest --no-discovery"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "inngest": "^4.21.0",
+    "jszip": "^3.10.2",
     "katex": "^0.18.9",
     "motion": "^13.4.4",
     "next": "16.3.6",
+    "officeparser": "^8.0.0",
+    "pdfjs-dist": "^6.3.289",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "^10.1.0",
@@ -33,6 +38,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "inngest-cli": "^1.45.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
