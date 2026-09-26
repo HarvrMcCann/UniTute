@@ -22,7 +22,7 @@ export function LessonView({ course, location, lessonDbId, resumeBlockId }: Less
     <>
       {/* Outside FadeIn: its transform would break the tracker's fixed-position chip */}
       <ProgressTracker
-        key={lesson.id}
+        key={`progress-${lesson.id}`}
         courseId={course.id}
         lessonKey={lesson.id}
         lessonDbId={lessonDbId}
