@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { SimpleHeader } from "@/components/ui/SimpleHeader";
 import { AutoRefresh } from "@/components/upload/AutoRefresh";
+import { RetryExtraction } from "@/components/upload/RetryExtraction";
 import { SourceFileRow, type SourceFile } from "@/components/upload/SourceFileRow";
 import { createClient, getProfile, getUser } from "@/lib/supabase/server";
 
@@ -20,6 +21,14 @@ type Row = {
   char_count: number | null;
 };
 
+/** Reading normally takes seconds per file; after 2 minutes with nothing finished, offer a restart. */
+const STALL_MS = 2 * 60 * 1000;
+
+// Server-rendered once per request, so reading the clock here is fine.
+function olderThan(timestamp: string, ms: number): boolean {
+  return Date.now() - new Date(timestamp).getTime() > ms;
+}
+
 export default async function CourseFilesPage({ params }: PageProps<"/upload/[courseId]">) {
   const { courseId } = await params;
   const user = await getUser();
@@ -27,7 +36,7 @@ export default async function CourseFilesPage({ params }: PageProps<"/upload/[co
 
   const supabase = await createClient();
   const [{ data: course }, { data: rows }, profile] = await Promise.all([
-    supabase.from("courses").select("id, title, course_code, status").eq("id", courseId).maybeSingle(),
+    supabase.from("courses").select("id, title, course_code, status, updated_at").eq("id", courseId).maybeSingle(),
     supabase
       .from("source_files")
       .select("id, box, filename, kind, week, page_count, size_bytes, status, error, char_count")
@@ -54,6 +63,7 @@ export default async function CourseFilesPage({ params }: PageProps<"/upload/[co
   const done = files.filter((f) => f.status === "done").length;
   const failed = files.filter((f) => f.status === "failed").length;
   const inProgress = course.status === "extracting" || working > 0;
+  const stalled = inProgress && done + failed === 0 && olderThan(course.updated_at, STALL_MS);
 
   // Content files grouped by week (weekless last), objectives separately.
   const content = files.filter((f) => f.box === "content");
@@ -85,6 +95,7 @@ export default async function CourseFilesPage({ params }: PageProps<"/upload/[co
               <p className="mt-1 text-sm text-muted">
                 This usually takes a minute or two. You can leave this page and come back.
               </p>
+              {stalled && <RetryExtraction courseId={course.id} />}
             </>
           ) : (
             <>

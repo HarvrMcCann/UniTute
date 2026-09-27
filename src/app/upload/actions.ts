@@ -124,3 +124,20 @@ export async function getTextPreview(fileId: string): Promise<Result<{ text: str
   const text = (data.extracted_text as string | null) ?? "";
   return { ok: true, text: text.slice(0, PREVIEW_CHARS), total: data.char_count ?? text.length };
 }
+
+/** Re-sends the "files uploaded" event for a course whose extraction never started or stalled. */
+export async function restartExtraction(courseId: string): Promise<Result<object>> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Please sign in again." };
+  const supabase = await createClient();
+  // RLS: this only matches (and updates) the user's own course.
+  const { data, error } = await supabase
+    .from("courses")
+    .update({ status: "extracting", updated_at: new Date().toISOString() })
+    .eq("id", courseId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) return { ok: false, error: error?.message ?? "Course not found" };
+  await inngest.send({ name: "course/files.uploaded", data: { courseId } });
+  return { ok: true };
+}
