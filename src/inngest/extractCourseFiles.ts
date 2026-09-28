@@ -1,5 +1,6 @@
 import { OfficeParser } from "officeparser";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cleanText } from "@/lib/upload/cleanText";
 import { inngest } from "./client";
 
 /*
@@ -20,9 +21,16 @@ export const extractCourseFiles = inngest.createFunction(
     triggers: [{ event: "course/files.uploaded" }],
     concurrency: { limit: 1, key: "event.data.courseId" },
     retries: 2,
-    onFailure: async ({ event }) => {
+    // Retries used up: never leave files stuck on "Reading…". The review page offers Try again.
+    onFailure: async ({ event, error }) => {
       const courseId = (event.data.event.data as { courseId: string }).courseId;
-      await createAdminClient().from("courses").update({ status: "failed" }).eq("id", courseId);
+      const admin = createAdminClient();
+      await admin
+        .from("source_files")
+        .update({ status: "failed", error: `Couldn't finish reading this file: ${error.message}`.slice(0, 500) })
+        .eq("course_id", courseId)
+        .in("status", ["pending", "extracting"]);
+      await admin.from("courses").update({ status: "failed" }).eq("id", courseId);
     },
   },
   async ({ event, step }) => {
@@ -33,7 +41,7 @@ export const extractCourseFiles = inngest.createFunction(
         .from("source_files")
         .select("id, storage_path, filename")
         .eq("course_id", courseId)
-        .in("status", ["pending", "extracting"]);
+        .in("status", ["pending", "extracting", "failed"]);
       if (error) throw new Error(error.message);
       return data as PendingFile[];
     });
@@ -67,7 +75,7 @@ async function extractOne(file: PendingFile): Promise<{ ok: boolean; chars: numb
   try {
     const ast = await OfficeParser.parseOffice(Buffer.from(await blob.arrayBuffer()), { extractAttachments: false });
     const out = await ast.to("text", { includeImages: false, textConfig: { preserveLayout: false } });
-    text = tidy(out.value);
+    text = cleanText(out.value);
     const metaPages = (ast.metadata as { pages?: unknown } | undefined)?.pages;
     if (typeof metaPages === "number" && metaPages > 0) pages = metaPages;
   } catch (error) {
@@ -92,12 +100,4 @@ async function extractOne(file: PendingFile): Promise<{ ok: boolean; chars: numb
     .eq("id", file.id);
   if (error) throw new Error(error.message);
   return { ok: true, chars: text.length };
-}
-
-/** Collapses runs of blank lines and trailing spaces; PDFs produce a lot of both. */
-function tidy(text: string): string {
-  return text
-    .replace(/[ \t]+$/gm, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }

@@ -4,15 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { restartExtraction } from "@/app/upload/actions";
 
-/** Shown when files have sat unread for a while: starts the reading job again. */
-export function RetryExtraction({ courseId }: { courseId: string }) {
+/** Starts the reading job again for files that are stuck or failed. */
+export function RetryExtraction({ courseId, prompt }: { courseId: string; prompt?: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3">
-      <p className="text-sm text-muted">Taking longer than it should?</p>
+      {prompt && <p className="text-sm text-muted">{prompt}</p>}
       <button
         type="button"
         disabled={pending}

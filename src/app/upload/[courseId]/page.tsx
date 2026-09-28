@@ -85,7 +85,12 @@ export default async function CourseFilesPage({ params }: PageProps<"/upload/[co
           }`}
         >
           {course.status === "failed" ? (
-            <p className="font-medium text-mastery-low">Something went wrong reading your files. Try uploading them again.</p>
+            <>
+              <p className="font-medium text-mastery-low">
+                {failed > 0 ? `${failed} file${failed === 1 ? "" : "s"} couldn’t be read.` : "Something went wrong reading your files."}
+              </p>
+              <RetryExtraction courseId={course.id} />
+            </>
           ) : inProgress ? (
             <>
               <p className="flex items-center gap-2 font-medium">
@@ -95,7 +100,7 @@ export default async function CourseFilesPage({ params }: PageProps<"/upload/[co
               <p className="mt-1 text-sm text-muted">
                 This usually takes a minute or two. You can leave this page and come back.
               </p>
-              {stalled && <RetryExtraction courseId={course.id} />}
+              {stalled && <RetryExtraction courseId={course.id} prompt="Taking longer than it should?" />}
             </>
           ) : (
             <>
