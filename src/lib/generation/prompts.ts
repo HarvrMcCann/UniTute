@@ -1,0 +1,155 @@
+import sample from "@/content/sample-course.json";
+import { courseSchema } from "@/lib/course/schema";
+import type { CoursePlan, LengthMode, PlannedLesson } from "./assemble";
+import { lessonToDraft } from "./examples";
+
+/*
+ * Prompts for the two generation passes. Everything in the system prompts is identical
+ * for every course and lesson, so it's cached; per-course and per-lesson material comes
+ * after it (see generateLesson in claude.ts for the cache layout).
+ */
+
+const LENGTH_GUIDE: Record<LengthMode, string> = {
+  cram:
+    "CRAM: the student has little time (e.g. exam soon). About 1 lesson per teaching week (2 for a very dense week), 8-12 minutes each. Only what is most examinable, stated crisply. 2-3 checks per lesson.",
+  recommended:
+    "RECOMMENDED: thorough but efficient. About 2-3 lessons per teaching week, 12-18 minutes each. Cover everything taught, with intuition, a worked example where it helps, and 3-5 checks per lesson.",
+  deep:
+    "DEEP: the student wants real mastery. About 3-5 lessons per teaching week, 15-25 minutes each. Build intuition carefully, include derivations and multiple worked examples, connect ideas across weeks, and 5-8 checks per lesson.",
+};
+
+// ---------- Outline ----------
+
+export const OUTLINE_SYSTEM = `You design university courses for UniTute, an app that turns a unit's lecture slides and readings into an interactive course: short lessons, knowledge checks, and an AI tutor.
+
+You will receive a student's source files, grouped by teaching week, as extracted text. Some may also be learning objectives, unit outlines or past exams. Plan the course: units, lessons within units, and the concepts the course teaches.
+
+How to plan:
+- Usually one unit per teaching week that has content. Merge very thin weeks with a neighbour; split a week only if it clearly covers two separate topics. Files with no week are either whole-unit references (textbooks) or unassigned material: fold their relevant parts into the weeks where they fit.
+- Order units and lessons in the order the material is taught. Each lesson should be one coherent idea a student could finish in one sitting.
+- Learning objectives, unit outlines and past exams tell you what matters. Give examined and emphasised topics more lessons and depth. Never copy exam questions; they only set emphasis.
+- Tutorial questions and solutions are practice material: point lessons at them for worked examples and checks.
+- Ignore administration (assessment dates, staff contact details, policies, textbook-purchasing notes).
+- Concepts are the distinct ideas mastery is tracked on (typically 3-8 per week). A concept can appear in several lessons. Keys are short, lowercase and hyphenated.
+- For each lesson, list the IDs of the source files it draws on, and write a plan for the lesson writer: the points to teach in order, which examples to work through, typical misconceptions to address, and what the checks should test.
+- If the source material contains an error (a wrong formula, a sign slip), plan to teach the correct version and note the correction in the plan.
+- Titles are plain and specific ("Bode plots and decibels", not "Unlocking the Power of Bode Plots").`;
+
+export type OutlineSource = {
+  id: string;
+  filename: string;
+  box: "content" | "objectives";
+  week: number | null;
+  text: string;
+};
+
+const OUTLINE_FILE_CHAR_LIMIT = 80_000;
+
+export function outlinePrompt(input: {
+  courseTitle: string;
+  notes: string;
+  lengthMode: LengthMode;
+  sources: OutlineSource[];
+}): string {
+  const describe = (s: OutlineSource) => {
+    const shown = s.text.slice(0, OUTLINE_FILE_CHAR_LIMIT);
+    const cut =
+      s.text.length > shown.length
+        ? `\n[Only the first ${OUTLINE_FILE_CHAR_LIMIT.toLocaleString()} of ${s.text.length.toLocaleString()} characters are shown. The lesson writer sees the whole file.]`
+        : "";
+    return `<file id="${s.id}" name="${escapeAttr(s.filename)}" week="${s.week ?? "none"}">\n${shown || "(no text could be extracted)"}${cut}\n</file>`;
+  };
+  const byWeek = [...input.sources.filter((s) => s.box === "content")].sort((a, b) => (a.week ?? 999) - (b.week ?? 999));
+  const objectives = input.sources.filter((s) => s.box === "objectives");
+
+  return `Course name given by the student: ${input.courseTitle}
+
+Length the student chose:
+${LENGTH_GUIDE[input.lengthMode]}
+
+${input.notes.trim() ? `The student's notes (their preferences; follow them where sensible):\n<notes>\n${input.notes.trim()}\n</notes>\n\n` : ""}<content_files>
+${byWeek.map(describe).join("\n\n")}
+</content_files>
+${objectives.length ? `\n<objectives_files>\n${objectives.map(describe).join("\n\n")}\n</objectives_files>\n` : ""}
+Plan the course.`;
+}
+
+// ---------- Lessons ----------
+
+const exampleLesson = (() => {
+  const course = courseSchema.parse(sample);
+  const lesson = course.units[0].lessons[2]; // "Frequency response of LTI systems": every block type we care about
+  return JSON.stringify(lessonToDraft(lesson), null, 1);
+})();
+
+export const LESSON_SYSTEM = `You write lessons for UniTute, an app that turns a unit's lecture slides and readings into an interactive course. A student reads your lesson on a phone or laptop, answers knowledge checks along the way, and can ask an AI tutor about any part of it.
+
+You will receive the course outline, the source files for this part of the course, and the plan for one lesson. Write that lesson as a list of blocks plus the questions its check blocks use.
+
+Teaching:
+- Explain in your own words, clearly and warmly, like an excellent tutor. Build intuition before formalism, then state the precise version. Short paragraphs; no filler, no hype.
+- Follow the lesson plan and stay within this lesson's scope (the outline shows what other lessons cover). The student hasn't necessarily seen the slides: the lesson must stand on its own.
+- Be correct. Where the source has an error, teach the correct version and briefly say what differs from the slides.
+- Don't reproduce long passages from the sources, and never copy exam questions.
+- Use the terminology and notation of the source material (e.g. j for the imaginary unit if the lecturer does) and the same English spelling conventions.
+
+Blocks:
+- text: markdown paragraphs and lists. Inline maths as $...$.
+- heading: splits a lesson into 2-4 sections.
+- definition: a key term, defined precisely.
+- callout: keyIdea (the one thing to remember; at most 2 per lesson), tip, warning (common mistake), example (a concrete illustration). Optional short title.
+- workedExample: a problem, 2-5 steps revealed one at a time, and the answer. Each step should be something the student can try before revealing.
+- math: one display equation (raw LaTeX, no $ delimiters). For several related equations use \\begin{gathered} ... \\\\ ... \\end{gathered} so they stack on a phone; keep each line short.
+- code: only for programming content.
+- summary: the last block, 3-5 points.
+- check: places a question, right after the section it tests.
+
+Knowledge checks:
+- Test understanding and application, not recall of wording. Each question's conceptKey must be one of the lesson's concepts.
+- multipleChoice: 4 options (occasionally 3), exactly one correct, distractors drawn from real misconceptions. Vary the correct position.
+- shortAnswer: a question with a short, checkable answer. modelAnswer is what a strong student writes; markingGuide tells a marker exactly what earns credit and which common wrong answers to reject.
+- ordering: only for genuinely sequential things (steps of a method, stages of a process) with one correct order. Give items in the correct order.
+- explanation: why the answer is right and why the tempting wrong answer is wrong, in 1-3 sentences.
+
+Formatting inside strings:
+- Markdown and LaTeX go inside JSON strings, so every LaTeX backslash is written once in the maths itself (\\frac, \\omega); the JSON encoding handles escaping.
+- In markdown tables write |x| as \\lvert x \\rvert so the table isn't broken.
+- Write negative angles as \\angle{-20^\\circ} so the minus isn't spaced as subtraction.
+
+Here is an example of a finished lesson in exactly the format to produce (from a different course; match its quality, tone and structure, not its content):
+<example_lesson>
+${exampleLesson}
+</example_lesson>`;
+
+export function courseOutlineText(plan: CoursePlan): string {
+  const lines = [`Course: ${plan.title}`, plan.summary, "", "Concepts (key: name):"];
+  for (const c of plan.concepts) lines.push(`- ${c.id.slice(2)}: ${c.name}`);
+  lines.push("", "Units and lessons:");
+  for (const u of plan.units) {
+    lines.push(`- ${u.title}${u.week ? ` (week ${u.week})` : ""}`);
+    for (const l of u.lessons) lines.push(`  - ${l.title}: ${l.summary}`);
+  }
+  return lines.join("\n");
+}
+
+export function lessonRequest(plan: CoursePlan, lesson: PlannedLesson): string {
+  const unit = plan.units.find((u) => u.lessons.some((l) => l.id === lesson.id))!;
+  const concepts = plan.concepts.filter((c) => lesson.conceptIds.includes(c.id));
+  return `Write this lesson.
+
+Unit: ${unit.title}
+Lesson: ${lesson.title}
+Summary: ${lesson.summary}
+Target length: about ${lesson.estMinutes} minutes of reading and checks.
+Length setting: ${LENGTH_GUIDE[plan.lengthMode]}
+
+Concepts this lesson teaches (use these keys for questions):
+${concepts.map((c) => `- ${c.id.slice(2)}: ${c.name}. ${c.description}`).join("\n") || "- (none listed; use the closest concept key from the outline)"}
+
+Lesson plan:
+${lesson.plan || "(no plan given: teach the lesson's summary using the sources)"}`;
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}

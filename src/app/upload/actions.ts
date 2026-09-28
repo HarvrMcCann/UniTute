@@ -141,3 +141,32 @@ export async function restartExtraction(courseId: string): Promise<Result<object
   await inngest.send({ name: "course/files.uploaded", data: { courseId } });
   return { ok: true };
 }
+
+/** Starts building the course from its extracted files (Claude outline + lessons, in the background). */
+export async function startGeneration(courseId: string, lengthMode: "cram" | "recommended" | "deep"): Promise<Result<object>> {
+  const user = await getUser();
+  if (!user) return { ok: false, error: "Please sign in again." };
+  if (!["cram", "recommended", "deep"].includes(lengthMode)) return { ok: false, error: "Pick a course length." };
+
+  const supabase = await createClient();
+  // Only from "files read" or a failed build; RLS limits this to the user's own course.
+  const { data, error } = await supabase
+    .from("courses")
+    .update({
+      status: "generating",
+      length_mode: lengthMode,
+      generation_progress: { stage: "outline" },
+      generation_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", courseId)
+    .in("status", ["extracted", "failed"])
+    .select("id")
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "This course is already being built, or its files aren't ready yet." };
+
+  await inngest.send({ name: "course/generate.requested", data: { courseId } });
+  revalidatePath("/");
+  return { ok: true };
+}

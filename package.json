@@ -10,9 +10,11 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "seed": "tsx --env-file=.env.local scripts/seedSampleCourse.ts",
-    "inngest": "inngest-cli dev -u http://localhost:3000/api/inngest --no-discovery"
+    "inngest": "inngest-cli dev -u http://localhost:3000/api/inngest --no-discovery",
+    "generate": "tsx --env-file=.env.local scripts/generateCourse.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "inngest": "^4.21.0",
