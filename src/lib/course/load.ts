@@ -34,7 +34,7 @@ export const getCourse = cache(async (courseId: string): Promise<LoadedCourse | 
     supabase.from("units").select("id, key, position, title, summary, week").eq("course_id", courseId),
     supabase
       .from("lessons")
-      .select("id, key, unit_id, position, title, summary, est_minutes, blocks")
+      .select("id, key, unit_id, position, title, summary, est_minutes, blocks, flashcards, formulas")
       .eq("course_id", courseId),
     supabase.from("concepts").select("id, key, name, description").eq("course_id", courseId),
     supabase
@@ -168,6 +168,9 @@ export type CourseOutline = {
     title: string;
     week: number | null;
     lessons: { id: string; title: string; estMinutes: number }[];
+    /** Study tools gathered from the unit's lessons. */
+    flashcardCount: number;
+    formulaCount: number;
   }[];
 };
 
@@ -181,6 +184,8 @@ export function outlineOf(course: Course): CourseOutline {
       title: u.title,
       week: u.week,
       lessons: u.lessons.map((l) => ({ id: l.id, title: l.title, estMinutes: l.estMinutes })),
+      flashcardCount: u.lessons.reduce((n, l) => n + l.flashcards.length, 0),
+      formulaCount: u.lessons.reduce((n, l) => n + l.formulas.length, 0),
     })),
   };
 }

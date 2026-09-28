@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { compile, ExpressionError } from "@/lib/plot/expression";
 
 /**
  * Course JSON schema: the single source of truth for the course format.
@@ -23,6 +24,30 @@ export const conceptSchema = z.object({
 });
 
 // ---------- Blocks ----------
+
+export const plotAxisSchema = z.object({
+  label: z.string(),
+  min: z.number(),
+  max: z.number(),
+  scale: z.enum(["linear", "log"]),
+});
+
+/** A slider the student drags; its `name` can be used in series expressions. */
+export const plotParamSchema = z.object({
+  name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/),
+  label: z.string(),
+  min: z.number(),
+  max: z.number(),
+  step: z.number().positive(),
+  value: z.number(),
+});
+
+/** `expr` is a formula in x and the params, e.g. "-10*log10(1 + (x*tau)^2)"; see lib/plot/expression.ts. */
+export const plotSeriesSchema = z.object({
+  label: z.string(),
+  expr: z.string().min(1),
+  style: z.enum(["line", "stem"]),
+});
 
 const blockBase = {
   id: id("b"),
@@ -57,7 +82,34 @@ export const blockSchema = z.discriminatedUnion("type", [
   z.object({ ...blockBase, type: z.literal("math"), latex: z.string().min(1), caption: z.string().optional() }),
   z.object({ ...blockBase, type: z.literal("summary"), points: z.array(markdown).min(1) }),
   z.object({ ...blockBase, type: z.literal("check"), questionId: z.string() }),
+  // Graph of one or more formulas, optionally with sliders for parameters. Drawn by the app.
+  z.object({
+    ...blockBase,
+    type: z.literal("plot"),
+    title: z.string().optional(),
+    caption: z.string().optional(),
+    x: plotAxisSchema,
+    y: plotAxisSchema,
+    params: z.array(plotParamSchema).max(4),
+    series: z.array(plotSeriesSchema).min(1).max(5),
+  }),
+  // A static SVG drawing (circuit, block diagram, labelled sketch). Shown as an image, so it can't run code.
+  z.object({ ...blockBase, type: z.literal("diagram"), svg: z.string().min(1), alt: z.string().min(1), caption: z.string().optional() }),
+  // A self-contained interactive (simulation, builder, explorable) written by Claude, run in a sandboxed iframe.
+  z.object({
+    ...blockBase,
+    type: z.literal("widget"),
+    title: z.string().min(1),
+    description: markdown,
+    html: z.string().min(1),
+    height: z.number().int().min(120).max(1200),
+  }),
 ]);
+
+// ---------- Unit study tools (gathered per unit from each lesson) ----------
+
+export const flashcardSchema = z.object({ front: markdown, back: markdown });
+export const formulaSchema = z.object({ name: z.string().min(1), latex: z.string().min(1), note: z.string() });
 
 // ---------- Questions ----------
 
@@ -99,6 +151,8 @@ export const lessonSchema = z.object({
   conceptIds: z.array(z.string()),
   blocks: z.array(blockSchema).min(1),
   questions: z.array(questionSchema),
+  flashcards: z.array(flashcardSchema).default([]),
+  formulas: z.array(formulaSchema).default([]),
 });
 
 export const unitSchema = z.object({
@@ -149,6 +203,12 @@ export const courseSchema = courseShape.superRefine((course, ctx) => {
       lesson.blocks.forEach((block, b) => {
         unique(block.id, [...at, "blocks", b, "id"]);
         block.conceptIds?.forEach((c, i) => knownConcept(c, [...at, "blocks", b, "conceptIds", i]));
+        if (block.type === "plot") {
+          plotProblems(block).forEach((message) => ctx.addIssue({ code: "custom", message, path: [...at, "blocks", b] }));
+        }
+        if (block.type === "widget" && block.html.length > WIDGET_MAX_CHARS) {
+          ctx.addIssue({ code: "custom", message: "widget html is too large", path: [...at, "blocks", b, "html"] });
+        }
         if (block.type === "check") {
           placements.set(block.questionId, (placements.get(block.questionId) ?? 0) + 1);
         }
@@ -185,7 +245,36 @@ export const courseSchema = courseShape.superRefine((course, ctx) => {
   });
 });
 
+export const WIDGET_MAX_CHARS = 120_000;
+const RESERVED_NAMES = new Set(["x", "pi", "e"]);
+
+/** Everything wrong with a plot block (empty when it's fine). Used by the validator and by generation. */
+export function plotProblems(plot: Pick<PlotBlock, "x" | "y" | "params" | "series">): string[] {
+  const problems: string[] = [];
+  for (const [name, axis] of [["x", plot.x], ["y", plot.y]] as const) {
+    if (!(axis.min < axis.max)) problems.push(`${name} axis min must be below max`);
+    if (axis.scale === "log" && axis.min <= 0) problems.push(`${name} axis is logarithmic, so min must be above 0`);
+  }
+  const names = new Set<string>();
+  for (const p of plot.params) {
+    if (RESERVED_NAMES.has(p.name) || names.has(p.name)) problems.push(`parameter name "${p.name}" is reserved or repeated`);
+    names.add(p.name);
+    if (!(p.min < p.max) || p.value < p.min || p.value > p.max) problems.push(`parameter "${p.name}" has an invalid range`);
+  }
+  for (const s of plot.series) {
+    try {
+      compile(s.expr, ["x", ...names]);
+    } catch (error) {
+      problems.push(`series "${s.label}": ${error instanceof ExpressionError ? error.message : "invalid formula"}`);
+    }
+  }
+  return problems;
+}
+
 export type Course = z.infer<typeof courseSchema>;
+export type PlotBlock = z.infer<typeof blockSchema> & { type: "plot" };
+export type Flashcard = z.infer<typeof flashcardSchema>;
+export type Formula = z.infer<typeof formulaSchema>;
 export type Concept = z.infer<typeof conceptSchema>;
 export type Unit = z.infer<typeof unitSchema>;
 export type Lesson = z.infer<typeof lessonSchema>;

@@ -1,6 +1,6 @@
-import { courseSchema, type Block, type Course, type Lesson, type Question } from "@/lib/course/schema";
+import { courseSchema, plotProblems, WIDGET_MAX_CHARS, type Block, type Course, type Lesson, type Question } from "@/lib/course/schema";
 import { seededShuffle } from "@/lib/shuffle";
-import type { LessonContent, LessonQuestionDraft, Outline } from "./schemas";
+import type { LessonQuestionDraft, LessonResult, Outline } from "./schemas";
 
 /*
  * Turns Claude's outline + per-lesson content into a valid Course. Our code owns every
@@ -111,7 +111,9 @@ export function planFromOutline(
 const nonEmpty = (s: string | null | undefined): s is string => typeof s === "string" && s.trim().length > 0;
 
 /** Builds one lesson from Claude's draft content, with IDs derived from the lesson ID. */
-export function buildLesson(planned: PlannedLesson, content: LessonContent, plan: CoursePlan): Lesson {
+export function buildLesson(planned: PlannedLesson, result: LessonResult, plan: CoursePlan): Lesson {
+  const { content, widgets } = result;
+  let interactiveIndex = 0;
   const stem = planned.id.slice(2); // "l-bode-plots" -> "bode-plots"
   const knownConcepts = new Set(plan.concepts.map((c) => c.id));
   const conceptBySlug = new Map(plan.concepts.map((c) => [c.id.slice(2), c.id]));
@@ -191,6 +193,47 @@ export function buildLesson(planned: PlannedLesson, content: LessonContent, plan
         }
         break;
       }
+      case "plot": {
+        const plot = {
+          x: draft.x,
+          y: draft.y,
+          params: draft.params.slice(0, 4).map((p) => ({ ...p, step: p.step > 0 ? p.step : (p.max - p.min) / 100 })),
+          series: draft.series.filter((s) => nonEmpty(s.expr)).slice(0, 5),
+        };
+        // A plot with a broken formula or axis is dropped rather than shown wrong.
+        if (plot.series.length > 0 && plotProblems(plot).length === 0)
+          blocks.push({
+            id,
+            type: "plot",
+            ...plot,
+            ...(nonEmpty(draft.title) && { title: draft.title.trim() }),
+            ...(nonEmpty(draft.caption) && { caption: draft.caption.trim() }),
+          });
+        break;
+      }
+      case "diagram": {
+        const svg = cleanSvg(draft.svg);
+        if (svg && nonEmpty(draft.alt))
+          blocks.push({ id, type: "diagram", svg, alt: draft.alt.trim(), ...(nonEmpty(draft.caption) && { caption: draft.caption.trim() }) });
+        break;
+      }
+      case "interactive": {
+        const built = widgets[interactiveIndex++] ?? null;
+        if (built && nonEmpty(built.html) && built.html.length <= WIDGET_MAX_CHARS) {
+          blocks.push({
+            id,
+            type: "widget",
+            title: draft.title.trim() || "Try it",
+            description: nonEmpty(draft.fallback) ? draft.fallback : draft.title,
+            html: built.html,
+            height: clamp(built.height || 420, 160, 1000),
+          });
+        } else if (nonEmpty(draft.fallback)) {
+          // The interactive couldn't be built: keep its explanation so the lesson still reads through.
+          blocks.push({ id, type: "callout", variant: "example", title: draft.title.trim() || undefined, markdown: draft.fallback });
+        }
+        break;
+      }
     }
   }
 
@@ -212,7 +255,28 @@ export function buildLesson(planned: PlannedLesson, content: LessonContent, plan
     conceptIds: planned.conceptIds,
     blocks,
     questions,
+    flashcards: content.flashcards
+      .filter((f) => nonEmpty(f.front) && nonEmpty(f.back))
+      .slice(0, 15)
+      .map((f) => ({ front: f.front.trim(), back: f.back.trim() })),
+    formulas: content.formulas
+      .filter((f) => nonEmpty(f.name) && nonEmpty(f.latex))
+      .slice(0, 12)
+      .map((f) => ({ name: f.name.trim(), latex: f.latex.trim(), note: f.note?.trim() ?? "" })),
   };
+}
+
+const SVG_MAX_CHARS = 60_000;
+
+/**
+ * Diagrams are shown as <img> (so any script inside can't run), but keep them well-formed:
+ * a single <svg> root with a viewBox, no scripts, event handlers, foreign content or external links.
+ */
+export function cleanSvg(svg: string): string | null {
+  const s = svg.trim();
+  if (s.length > SVG_MAX_CHARS || !/^<svg[\s>]/i.test(s) || !/<\/svg>$/i.test(s) || !/viewBox=/i.test(s)) return null;
+  if (/<script|<foreignObject|\son[a-z]+\s*=|(?:xlink:)?href\s*=\s*["'](?!#)|url\(\s*["']?(?!#)/i.test(s)) return null;
+  return s.includes("xmlns=") ? s : s.replace(/^<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
 }
 
 function toQuestion(draft: LessonQuestionDraft, id: string, conceptId: string): Question | null {
@@ -258,7 +322,7 @@ export function shuffleOptions(options: string[], answerIndex: number, seed: str
 }
 
 /** Puts the whole course together and validates it; throws with details if anything is off. */
-export function assembleCourse(plan: CoursePlan, contents: Record<string, LessonContent>, meta: { university?: string; courseCode?: string; year?: number }): Course {
+export function assembleCourse(plan: CoursePlan, contents: Record<string, LessonResult>, meta: { university?: string; courseCode?: string; year?: number }): Course {
   const usedConcepts = new Set<string>();
   const units = plan.units.map((unit) => ({
     id: unit.id,

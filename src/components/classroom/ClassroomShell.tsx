@@ -84,9 +84,9 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
   }
 
   return (
-    <div className="flex h-dvh flex-col">
+    <div className="flex h-dvh flex-col print:h-auto">
       {/* Top bar */}
-      <header className="flex h-14 shrink-0 items-center gap-1 px-2 sm:px-3">
+      <header className="flex h-14 shrink-0 items-center gap-1 px-2 sm:px-3 print:hidden">
         <IconButton label="Toggle curriculum" onClick={toggleCurriculum}>
           <MenuIcon className="lg:hidden" />
           <SidebarIcon className="hidden lg:block" />
@@ -104,7 +104,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
         <AccountMenu account={account} />
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-3 px-0 sm:px-3 sm:pb-3">
+      <div className="flex min-h-0 flex-1 gap-3 px-0 sm:px-3 sm:pb-3 print:block">
         {/* Desktop curriculum column */}
         <AnimatePresence initial={false}>
           {!navCollapsed && (
@@ -114,7 +114,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
               animate={{ width: 280, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className={`hidden shrink-0 overflow-hidden lg:block ${panel}`}
+              className={`hidden shrink-0 overflow-hidden lg:block print:!hidden ${panel}`}
             >
               <div className="h-full w-[280px]">
                 <CurriculumNav outline={outline} currentLessonId={lessonId} />
@@ -128,7 +128,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
         {/* With the phone tutor sheet open, pad the bottom so the whole lesson can still scroll into view above it */}
         <main
           id={LESSON_SCROLL_ID}
-          className={`scroll-thin min-w-0 flex-1 overflow-y-auto ${sheetOpen ? "max-md:pb-[60dvh]" : ""}`}
+          className={`scroll-thin min-w-0 flex-1 overflow-y-auto print:overflow-visible ${sheetOpen ? "max-md:pb-[60dvh]" : ""}`}
         >
           {children}
         </main>
@@ -144,7 +144,7 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
               animate={{ width: tutorWidth, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className={`shrink-0 flex-col overflow-hidden ${panel} ${TUTOR_PANEL_CLASSES[tutorMode]}`}
+              className={`shrink-0 flex-col overflow-hidden print:!hidden ${panel} ${TUTOR_PANEL_CLASSES[tutorMode]}`}
             >
               <div className="flex h-full flex-col" style={{ width: tutorWidth }}>
                 <TutorPanel lessonTitle={lessonTitle} onClose={closeTutor} />

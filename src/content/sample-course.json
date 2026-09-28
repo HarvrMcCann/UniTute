@@ -8,19 +8,71 @@
   "lengthMode": "recommended",
   "summary": "Week 7 of Signals and Systems: reading signals and LTI systems through magnitude and phase, designing filters, drawing Bode plots, and understanding how first- and second-order systems behave in time and frequency.",
   "concepts": [
-    { "id": "c-complex-polar", "name": "Complex numbers in polar form", "description": "Converting between rectangular and polar form, and multiplying and dividing in polar form." },
-    { "id": "c-phasors", "name": "Rotating phasors", "description": "A sinusoid as the real or imaginary part of a complex number rotating at angular frequency ω." },
-    { "id": "c-ft-mag-phase", "name": "Fourier transform magnitude and phase", "description": "Writing X(jω) as |X(jω)| e^{j∠X(jω)} and what each part says about a signal." },
-    { "id": "c-phase-importance", "name": "Importance of phase", "description": "Signals with identical magnitude spectra can look completely different if their phases differ." },
-    { "id": "c-frequency-response", "name": "Frequency response of LTI systems", "description": "H(jω) as the Fourier transform of the impulse response, with Y = HX: magnitudes multiply, phases add." },
-    { "id": "c-linear-phase", "name": "Linear and nonlinear phase", "description": "Linear phase delays every frequency by the same time; nonlinear phase distorts the waveform." },
-    { "id": "c-ideal-filters", "name": "Ideal filters", "description": "Ideal low-pass, high-pass and band-pass filters in continuous and discrete time." },
-    { "id": "c-practical-filters", "name": "Practical RC filters", "description": "Building low-pass and high-pass filters from a resistor and capacitor." },
-    { "id": "c-decibels", "name": "Decibels", "description": "Expressing gain as 20 log10|H| and the common dB values." },
-    { "id": "c-bode", "name": "Bode plots", "description": "Magnitude (dB) and phase plotted against log frequency, and their straight-line approximations." },
-    { "id": "c-impulse-step", "name": "Measuring impulse and step responses", "description": "Approximating an impulse in practice, and recovering h(t) as the derivative of the step response." },
-    { "id": "c-first-order", "name": "First-order systems", "description": "τ dy/dt + y = x: time constant, impulse and step responses, and the first-order Bode plot." },
-    { "id": "c-second-order", "name": "Second-order systems", "description": "Natural frequency and damping ratio, damping cases, and the second-order frequency response." }
+    {
+      "id": "c-complex-polar",
+      "name": "Complex numbers in polar form",
+      "description": "Converting between rectangular and polar form, and multiplying and dividing in polar form."
+    },
+    {
+      "id": "c-phasors",
+      "name": "Rotating phasors",
+      "description": "A sinusoid as the real or imaginary part of a complex number rotating at angular frequency ω."
+    },
+    {
+      "id": "c-ft-mag-phase",
+      "name": "Fourier transform magnitude and phase",
+      "description": "Writing X(jω) as |X(jω)| e^{j∠X(jω)} and what each part says about a signal."
+    },
+    {
+      "id": "c-phase-importance",
+      "name": "Importance of phase",
+      "description": "Signals with identical magnitude spectra can look completely different if their phases differ."
+    },
+    {
+      "id": "c-frequency-response",
+      "name": "Frequency response of LTI systems",
+      "description": "H(jω) as the Fourier transform of the impulse response, with Y = HX: magnitudes multiply, phases add."
+    },
+    {
+      "id": "c-linear-phase",
+      "name": "Linear and nonlinear phase",
+      "description": "Linear phase delays every frequency by the same time; nonlinear phase distorts the waveform."
+    },
+    {
+      "id": "c-ideal-filters",
+      "name": "Ideal filters",
+      "description": "Ideal low-pass, high-pass and band-pass filters in continuous and discrete time."
+    },
+    {
+      "id": "c-practical-filters",
+      "name": "Practical RC filters",
+      "description": "Building low-pass and high-pass filters from a resistor and capacitor."
+    },
+    {
+      "id": "c-decibels",
+      "name": "Decibels",
+      "description": "Expressing gain as 20 log10|H| and the common dB values."
+    },
+    {
+      "id": "c-bode",
+      "name": "Bode plots",
+      "description": "Magnitude (dB) and phase plotted against log frequency, and their straight-line approximations."
+    },
+    {
+      "id": "c-impulse-step",
+      "name": "Measuring impulse and step responses",
+      "description": "Approximating an impulse in practice, and recovering h(t) as the derivative of the step response."
+    },
+    {
+      "id": "c-first-order",
+      "name": "First-order systems",
+      "description": "τ dy/dt + y = x: time constant, impulse and step responses, and the first-order Bode plot."
+    },
+    {
+      "id": "c-second-order",
+      "name": "Second-order systems",
+      "description": "Natural frequency and damping ratio, damping cases, and the second-order frequency response."
+    }
   ],
   "units": [
     {
@@ -34,27 +86,38 @@
           "title": "Complex numbers, revisited",
           "summary": "Rectangular and polar form, when to use each, and how a rotating complex number becomes a sinusoid.",
           "estMinutes": 12,
-          "conceptIds": ["c-complex-polar", "c-phasors"],
+          "conceptIds": [
+            "c-complex-polar",
+            "c-phasors"
+          ],
           "blocks": [
             {
               "id": "b-cn-intro",
               "type": "text",
               "markdown": "Fourier transforms and frequency responses are **complex-valued**. To read them you need to move comfortably between two ways of writing a complex number, because each one makes different operations easy."
             },
-            { "id": "b-cn-h-forms", "type": "heading", "text": "Two ways to write the same number" },
+            {
+              "id": "b-cn-h-forms",
+              "type": "heading",
+              "text": "Two ways to write the same number"
+            },
             {
               "id": "b-cn-rect",
               "type": "definition",
               "term": "Rectangular form",
               "markdown": "$z = a + jb$, where $a$ is the real part and $b$ is the imaginary part. (Engineers write $j$ instead of $i$, because $i$ is taken by current.)",
-              "conceptIds": ["c-complex-polar"]
+              "conceptIds": [
+                "c-complex-polar"
+              ]
             },
             {
               "id": "b-cn-polar",
               "type": "definition",
               "term": "Polar form",
               "markdown": "$z = r\\,e^{j\\varphi} = |z|\\,e^{j\\angle z} = r\\angle\\varphi$, where $r$ is the **magnitude** (distance from the origin) and $\\varphi$ is the **angle** (measured anticlockwise from the positive real axis).",
-              "conceptIds": ["c-complex-polar"]
+              "conceptIds": [
+                "c-complex-polar"
+              ]
             },
             {
               "id": "b-cn-convert",
@@ -74,7 +137,11 @@
               "title": "Watch the quadrant",
               "markdown": "$\\arctan(b/a)$ only returns angles between $-90^\\circ$ and $90^\\circ$. If $a < 0$ the number is in the left half-plane, so add $180^\\circ$. Sketching the point first is the quickest way to catch this."
             },
-            { "id": "b-cn-h-ops", "type": "heading", "text": "Which form for which job" },
+            {
+              "id": "b-cn-h-ops",
+              "type": "heading",
+              "text": "Which form for which job"
+            },
             {
               "id": "b-cn-ops",
               "type": "text",
@@ -90,7 +157,9 @@
               "type": "callout",
               "variant": "keyIdea",
               "markdown": "This is why polar form matters this week: when a signal passes through a system, the output is a **product** of two complex numbers. Magnitudes multiply and phases add.",
-              "conceptIds": ["c-complex-polar"]
+              "conceptIds": [
+                "c-complex-polar"
+              ]
             },
             {
               "id": "b-cn-example",
@@ -104,13 +173,23 @@
               ],
               "answer": "$z_1 z_2 = 2\\sqrt{2}\\,\\angle\\tfrac{3\\pi}{4} = -2 + 2j$"
             },
-            { "id": "b-cn-check-1", "type": "check", "questionId": "q-cn-multiply" },
-            { "id": "b-cn-h-phasors", "type": "heading", "text": "Rotating phasors" },
+            {
+              "id": "b-cn-check-1",
+              "type": "check",
+              "questionId": "q-cn-multiply"
+            },
+            {
+              "id": "b-cn-h-phasors",
+              "type": "heading",
+              "text": "Rotating phasors"
+            },
             {
               "id": "b-cn-phasor",
               "type": "text",
               "markdown": "Take a fixed complex number $A = |A|e^{j\\theta_1}$ and multiply it by $e^{j\\omega t}$. The magnitude stays $|A|$, but the angle becomes $\\omega t + \\theta_1$ and keeps growing, so the vector **rotates** at angular frequency $\\omega$.\n\nIts shadow on each axis is a sinusoid:",
-              "conceptIds": ["c-phasors"]
+              "conceptIds": [
+                "c-phasors"
+              ]
             },
             {
               "id": "b-cn-phasor-math",
@@ -123,7 +202,11 @@
               "variant": "tip",
               "markdown": "So a sinusoid's **amplitude** is the phasor's magnitude, and its **phase** is where the phasor starts at $t = 0$. If $\\theta_1 = 0$, the phasor starts on the real axis and the cosine starts at its peak."
             },
-            { "id": "b-cn-check-2", "type": "check", "questionId": "q-cn-polar" },
+            {
+              "id": "b-cn-check-2",
+              "type": "check",
+              "questionId": "q-cn-polar"
+            },
             {
               "id": "b-cn-summary",
               "type": "summary",
@@ -141,7 +224,12 @@
               "type": "multipleChoice",
               "conceptId": "c-complex-polar",
               "prompt": "What is $(3\\angle 20^\\circ) \\times (2\\angle 40^\\circ)$?",
-              "options": ["$6\\angle 60^\\circ$", "$5\\angle 60^\\circ$", "$6\\angle 800^\\circ$", "$1.5\\angle{-20^\\circ}$"],
+              "options": [
+                "$6\\angle 60^\\circ$",
+                "$5\\angle 60^\\circ$",
+                "$6\\angle 800^\\circ$",
+                "$1.5\\angle{-20^\\circ}$"
+              ],
               "answerIndex": 0,
               "explanation": "In polar form you multiply the magnitudes ($3 \\times 2 = 6$) and add the angles ($20^\\circ + 40^\\circ = 60^\\circ$). $1.5\\angle{-20^\\circ}$ is what you'd get by dividing."
             },
@@ -154,6 +242,41 @@
               "markingGuide": "Magnitude must be $\\sqrt{2}$ (about 1.41). Angle must be $135^\\circ$ or $3\\pi/4$. An answer of $-45^\\circ$ means the student used $\\arctan(b/a)$ without correcting for the quadrant: mark incorrect and point this out.",
               "explanation": "$|z| = \\sqrt{(-1)^2 + 1^2} = \\sqrt{2}$. The calculator gives $\\arctan(1/-1) = -45^\\circ$, but the point $(-1, 1)$ is in the second quadrant, so add $180^\\circ$ to get $135^\\circ$."
             }
+          ],
+          "flashcards": [
+            {
+              "front": "How do you multiply two complex numbers in polar form?",
+              "back": "Multiply the magnitudes and **add** the angles: $r_1\\angle\\theta_1 \\cdot r_2\\angle\\theta_2 = r_1 r_2\\angle(\\theta_1+\\theta_2)$."
+            },
+            {
+              "front": "What is $|z|$ for $z = a + jb$?",
+              "back": "$|z| = \\sqrt{a^2 + b^2}$, the distance from the origin."
+            },
+            {
+              "front": "When does $\\arctan(b/a)$ give the wrong angle?",
+              "back": "When $a < 0$ (left half-plane): add $180^\\circ$."
+            },
+            {
+              "front": "What does $\\operatorname{Re}\\{A e^{j\\omega t}\\}$ trace out?",
+              "back": "The sinusoid $|A|\\cos(\\omega t + \\theta_1)$: amplitude from the magnitude, starting phase from the angle."
+            }
+          ],
+          "formulas": [
+            {
+              "name": "Magnitude",
+              "latex": "r = |z| = \\sqrt{a^2 + b^2}",
+              "note": "Rectangular to polar."
+            },
+            {
+              "name": "Angle",
+              "latex": "\\varphi = \\arctan\\!\\left(\\frac{b}{a}\\right)",
+              "note": "Add 180° when a < 0."
+            },
+            {
+              "name": "Polar multiply and divide",
+              "latex": "z_1 z_2 = r_1 r_2 e^{j(\\theta_1+\\theta_2)}, \\quad \\frac{z_1}{z_2} = \\frac{r_1}{r_2} e^{j(\\theta_1-\\theta_2)}",
+              "note": "Magnitudes multiply, angles add."
+            }
           ]
         },
         {
@@ -161,7 +284,10 @@
           "title": "Magnitude and phase of the Fourier transform",
           "summary": "Splitting a spectrum into magnitude and phase, and why the phase carries so much of a signal's shape.",
           "estMinutes": 12,
-          "conceptIds": ["c-ft-mag-phase", "c-phase-importance"],
+          "conceptIds": [
+            "c-ft-mag-phase",
+            "c-phase-importance"
+          ],
           "blocks": [
             {
               "id": "b-ft-intro",
@@ -179,26 +305,42 @@
               "type": "text",
               "markdown": "Read the synthesis equation as a recipe: $x(t)$ is built from complex exponentials $e^{j\\omega t}$ (rotating phasors), and $X(j\\omega)$ says how much of each to use and where each one starts.\n\nA square wave, for example, is a fundamental at $\\omega$ plus harmonics at $3\\omega$, $5\\omega$, $7\\omega$ and so on, and **each harmonic has its own magnitude and its own phase**."
             },
-            { "id": "b-ft-h-rep", "type": "heading", "text": "The magnitude-phase representation" },
+            {
+              "id": "b-ft-h-rep",
+              "type": "heading",
+              "text": "The magnitude-phase representation"
+            },
             {
               "id": "b-ft-def",
               "type": "definition",
               "term": "Magnitude-phase representation",
               "markdown": "Because $X(j\\omega)$ is generally complex, write it in polar form at every frequency:\n\n$$X(j\\omega) = |X(j\\omega)|\\, e^{j\\angle X(j\\omega)}$$",
-              "conceptIds": ["c-ft-mag-phase"]
+              "conceptIds": [
+                "c-ft-mag-phase"
+              ]
             },
             {
               "id": "b-ft-meaning",
               "type": "text",
               "markdown": "- $|X(j\\omega)|$, the **magnitude**, gives the relative sizes of the complex exponentials that make up $x(t)$.\n- $\\angle X(j\\omega)$, the **phase**, gives their relative phases: where each rotating phasor starts.\n\nDiscrete-time signals work the same way with the DTFT: $X(e^{j\\omega}) = |X(e^{j\\omega})|\\, e^{j\\angle X(e^{j\\omega})}$."
             },
-            { "id": "b-ft-check-1", "type": "check", "questionId": "q-ft-phase-meaning" },
-            { "id": "b-ft-h-phase", "type": "heading", "text": "Phase matters more than you'd think" },
+            {
+              "id": "b-ft-check-1",
+              "type": "check",
+              "questionId": "q-ft-phase-meaning"
+            },
+            {
+              "id": "b-ft-h-phase",
+              "type": "heading",
+              "text": "Phase matters more than you'd think"
+            },
             {
               "id": "b-ft-phase-signal",
               "type": "text",
               "markdown": "Consider a signal built from a constant and three harmonics:",
-              "conceptIds": ["c-phase-importance"]
+              "conceptIds": [
+                "c-phase-importance"
+              ]
             },
             {
               "id": "b-ft-phase-math",
@@ -216,9 +358,15 @@
               "variant": "example",
               "title": "The image-swap experiment",
               "markdown": "Take the 2D Fourier transform of two photos. Build new images that keep each photo's **magnitude** but swap in the other photo's **phase**, then inverse transform. Each result looks like the photo whose *phase* it received. Edges and positions (the structure you recognise) live mostly in the phase.",
-              "conceptIds": ["c-phase-importance"]
+              "conceptIds": [
+                "c-phase-importance"
+              ]
             },
-            { "id": "b-ft-check-2", "type": "check", "questionId": "q-ft-same-magnitude" },
+            {
+              "id": "b-ft-check-2",
+              "type": "check",
+              "questionId": "q-ft-same-magnitude"
+            },
             {
               "id": "b-ft-summary",
               "type": "summary",
@@ -258,6 +406,32 @@
               "answerIndex": 1,
               "explanation": "Same magnitudes means the same ingredients in the same amounts. Different phases means those ingredients are shifted differently, so the peaks add up in different places and the waveform shape changes."
             }
+          ],
+          "flashcards": [
+            {
+              "front": "What does $|X(j\\omega)|$ tell you?",
+              "back": "How much of each frequency is in $x(t)$: the relative size of each complex exponential."
+            },
+            {
+              "front": "What does $\\angle X(j\\omega)$ tell you?",
+              "back": "The relative phase of each exponential: where each one starts."
+            },
+            {
+              "front": "Same $|X(j\\omega)|$, different $\\angle X(j\\omega)$: same signal?",
+              "back": "Not necessarily. They can look very different; phase carries much of the shape."
+            }
+          ],
+          "formulas": [
+            {
+              "name": "Fourier transform",
+              "latex": "X(j\\omega) = \\int_{-\\infty}^{\\infty} x(t)\\, e^{-j\\omega t}\\, dt",
+              "note": "Analysis equation."
+            },
+            {
+              "name": "Magnitude-phase form",
+              "latex": "X(j\\omega) = |X(j\\omega)|\\, e^{j\\angle X(j\\omega)}",
+              "note": "Also used for the DTFT, X(e^{jω})."
+            }
           ]
         },
         {
@@ -265,13 +439,18 @@
           "title": "Frequency response of LTI systems",
           "summary": "How an LTI system scales and shifts each frequency, and the difference between linear and nonlinear phase.",
           "estMinutes": 15,
-          "conceptIds": ["c-frequency-response", "c-linear-phase"],
+          "conceptIds": [
+            "c-frequency-response",
+            "c-linear-phase"
+          ],
           "blocks": [
             {
               "id": "b-fr-intro",
               "type": "text",
               "markdown": "In the time domain, an LTI system's output is the convolution of the input with the impulse response: $y(t) = h(t) * x(t)$. The Fourier transform turns that convolution into a simple product.",
-              "conceptIds": ["c-frequency-response"]
+              "conceptIds": [
+                "c-frequency-response"
+              ]
             },
             {
               "id": "b-fr-product",
@@ -283,7 +462,16 @@
               "type": "definition",
               "term": "Frequency response",
               "markdown": "$H(j\\omega)$, the Fourier transform of the impulse response $h(t)$. Also called the transfer function.",
-              "conceptIds": ["c-frequency-response"]
+              "conceptIds": [
+                "c-frequency-response"
+              ]
+            },
+            {
+              "id": "b-fr-diagram",
+              "type": "diagram",
+              "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 700 190\"><style>.t{fill:var(--ink);font-size:18px}.m{fill:var(--muted);font-size:15px}.l{stroke:var(--ink);stroke-width:2;fill:none}.b{fill:var(--panel);stroke:var(--accent);stroke-width:2}.a{fill:var(--ink)}</style><text class=\"t\" x=\"70\" y=\"76\" text-anchor=\"middle\" font-style=\"italic\">x(t)</text><text class=\"m\" x=\"70\" y=\"100\" text-anchor=\"middle\">X(jω)</text><line class=\"l\" x1=\"118\" y1=\"82\" x2=\"246\" y2=\"82\"/><polygon class=\"a\" points=\"246,75 260,82 246,89\"/><rect class=\"b\" x=\"262\" y=\"37\" width=\"176\" height=\"90\" rx=\"14\"/><text class=\"t\" x=\"350\" y=\"76\" text-anchor=\"middle\">LTI system</text><text class=\"m\" x=\"350\" y=\"102\" text-anchor=\"middle\">h(t)  ·  H(jω)</text><line class=\"l\" x1=\"438\" y1=\"82\" x2=\"566\" y2=\"82\"/><polygon class=\"a\" points=\"566,75 580,82 566,89\"/><text class=\"t\" x=\"630\" y=\"76\" text-anchor=\"middle\" font-style=\"italic\">y(t)</text><text class=\"m\" x=\"630\" y=\"100\" text-anchor=\"middle\">Y(jω)</text><text class=\"m\" x=\"350\" y=\"168\" text-anchor=\"middle\">time domain: y(t) = h(t) ∗ x(t)     frequency domain: Y(jω) = H(jω) X(jω)</text></svg>",
+              "alt": "Block diagram: input x(t), with spectrum X(jω), enters an LTI system with impulse response h(t) and frequency response H(jω); the output is y(t), with spectrum Y(jω). In time y(t) = h(t) convolved with x(t); in frequency Y(jω) = H(jω) X(jω).",
+              "caption": "Convolution in time becomes multiplication in frequency."
             },
             {
               "id": "b-fr-impulse",
@@ -292,7 +480,11 @@
               "title": "Why the impulse?",
               "markdown": "$\\delta(t)$ has $X(j\\omega) = 1$: it contains **every frequency at the same magnitude**. Feeding it in tests the system at all frequencies at once, so $h(t)$ is the most complete description of the system."
             },
-            { "id": "b-fr-h-polar", "type": "heading", "text": "Magnitudes multiply, phases add" },
+            {
+              "id": "b-fr-h-polar",
+              "type": "heading",
+              "text": "Magnitudes multiply, phases add"
+            },
             {
               "id": "b-fr-polar",
               "type": "text",
@@ -308,16 +500,32 @@
               "type": "callout",
               "variant": "keyIdea",
               "markdown": "$|H(j\\omega)|$ is the system's **gain** at each frequency. $\\angle H(j\\omega)$ is the **phase shift** it adds at each frequency.",
-              "conceptIds": ["c-frequency-response"]
+              "conceptIds": [
+                "c-frequency-response"
+              ]
             },
-            { "id": "b-fr-check-1", "type": "check", "questionId": "q-fr-output" },
-            { "id": "b-fr-check-2", "type": "check", "questionId": "q-fr-steps" },
-            { "id": "b-fr-h-linear", "type": "heading", "text": "Linear phase is a pure delay" },
+            {
+              "id": "b-fr-check-1",
+              "type": "check",
+              "questionId": "q-fr-output"
+            },
+            {
+              "id": "b-fr-check-2",
+              "type": "check",
+              "questionId": "q-fr-steps"
+            },
+            {
+              "id": "b-fr-h-linear",
+              "type": "heading",
+              "text": "Linear phase is a pure delay"
+            },
             {
               "id": "b-fr-linear",
               "type": "text",
               "markdown": "Consider $H(j\\omega) = e^{-j\\omega t_0}$. Its magnitude is $|H(j\\omega)| = 1$ at every frequency, and its phase $\\angle H(j\\omega) = -\\omega t_0$ is a **straight line** in $\\omega$. The output is simply the input delayed: $y(t) = x(t - t_0)$.",
-              "conceptIds": ["c-linear-phase"]
+              "conceptIds": [
+                "c-linear-phase"
+              ]
             },
             {
               "id": "b-fr-linear-example",
@@ -331,14 +539,72 @@
               ],
               "answer": "Linear phase $\\Rightarrow$ a time delay of $t_0$ for all frequencies $\\Rightarrow$ $y(t) = x(t - t_0)$."
             },
-            { "id": "b-fr-h-nonlinear", "type": "heading", "text": "Nonlinear phase is distortion" },
+            {
+              "id": "b-fr-h-nonlinear",
+              "type": "heading",
+              "text": "Nonlinear phase is distortion"
+            },
             {
               "id": "b-fr-nonlinear",
               "type": "text",
               "markdown": "If $\\angle H(j\\omega)$ is **not** a straight line, each frequency gets a different time delay ($-\\angle H(j\\omega)/\\omega$). The components slip relative to each other, so the output changes shape even when $|H(j\\omega)| = 1$ and no frequency is made louder or quieter. It's the same effect as changing $\\phi_1, \\phi_2, \\phi_3$ in the previous lesson.",
-              "conceptIds": ["c-linear-phase"]
+              "conceptIds": [
+                "c-linear-phase"
+              ]
             },
-            { "id": "b-fr-check-3", "type": "check", "questionId": "q-fr-delay" },
+            {
+              "id": "b-fr-phase-plot",
+              "type": "plot",
+              "title": "Linear vs nonlinear phase",
+              "x": {
+                "label": "ω (rad/s)",
+                "min": 0,
+                "max": 6,
+                "scale": "linear"
+              },
+              "y": {
+                "label": "∠H(jω) (rad)",
+                "min": -9,
+                "max": 0,
+                "scale": "linear"
+              },
+              "params": [
+                {
+                  "name": "t0",
+                  "label": "Delay t₀ (s)",
+                  "min": 0.1,
+                  "max": 1.5,
+                  "step": 0.05,
+                  "value": 1
+                }
+              ],
+              "series": [
+                {
+                  "label": "Linear: −ωt₀",
+                  "expr": "-x*t0",
+                  "style": "line"
+                },
+                {
+                  "label": "Nonlinear: −2·arctan(ω)",
+                  "expr": "-2*atan(x)",
+                  "style": "line"
+                }
+              ],
+              "caption": "A straight line through the origin delays every frequency by the same t₀. The curve doesn’t: its delay −∠H/ω changes with frequency."
+            },
+            {
+              "id": "b-fr-widget",
+              "type": "widget",
+              "title": "Delay or distortion?",
+              "description": "The input $x(t) = \\cos t + 0.6\\cos 3t$ goes through an all-pass system ($|H| = 1$). With **linear phase** $\\angle H = -\\omega t_0$, both components are delayed by the same $t_0$, so the output is the input shifted right. With a **nonlinear phase** such as $-2\\arctan\\omega$, the fundamental and the third harmonic are delayed by different amounts, so the output changes shape even though no frequency got louder or quieter.",
+              "html": "<style>\n.w{display:flex;flex-direction:column;gap:12px}\n.seg{display:flex;flex-wrap:wrap;gap:8px}\n.seg button[aria-pressed=\"true\"]{background:var(--accent);border-color:var(--accent);color:#0e1320}\ncanvas{width:100%;height:220px;display:block;border-radius:12px;background:var(--panel)}\n.read{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;font-size:14px;color:var(--muted)}\n.read div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}\n.read b{display:block;font-size:17px;color:var(--ink)}\n.legend{display:flex;gap:16px;font-size:13px;color:var(--muted)}\n.sw{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}\n#t0l{display:block}\n</style>\n<div class=\"w\">\n  <div class=\"seg\" role=\"group\" aria-label=\"Phase response of the system\">\n    <button id=\"lin\" aria-pressed=\"true\">Linear phase: ∠H = −ωt₀</button>\n    <button id=\"non\" aria-pressed=\"false\">Nonlinear phase: ∠H = −2·arctan(ω)</button>\n  </div>\n  <label id=\"t0l\">Delay t₀ = <span id=\"t0v\"></span> s<input id=\"t0\" type=\"range\" min=\"0\" max=\"1.5\" step=\"0.05\" value=\"0.6\"></label>\n  <canvas id=\"c\" aria-label=\"Input and output waveforms\"></canvas>\n  <div class=\"legend\"><span><i class=\"sw\" style=\"background:var(--faint)\"></i>input x(t) = cos(t) + 0.6 cos(3t)</span><span><i class=\"sw\" style=\"background:var(--accent)\"></i>output y(t)</span></div>\n  <div class=\"read\">\n    <div>Fundamental (ω = 1) delayed by<b id=\"d1\"></b></div>\n    <div>3rd harmonic (ω = 3) delayed by<b id=\"d3\"></b></div>\n    <div id=\"verdict\"></div>\n  </div>\n</div>\n<script>\n(() => {\n  const c = document.getElementById(\"c\"), ctx = c.getContext(\"2d\"), t0 = document.getElementById(\"t0\");\n  let mode = \"lin\";\n  const phase = (w) => (mode === \"lin\" ? -w * Number(t0.value) : -2 * Math.atan(w));\n  const col = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();\n  function draw() {\n    const dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;\n    c.width = W * dpr; c.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);\n    const T = 4 * Math.PI, ys = (v) => H / 2 - (v * H) / 4;\n    ctx.strokeStyle = col(\"--line\"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();\n    const p1 = phase(1), p3 = phase(3);\n    const x = (t) => Math.cos(t) + 0.6 * Math.cos(3 * t);\n    const y = (t) => Math.cos(t + p1) + 0.6 * Math.cos(3 * t + p3);\n    for (const [f, stroke, width] of [[x, col(\"--faint\"), 2], [y, col(\"--accent\"), 2.5]]) {\n      ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.beginPath();\n      for (let i = 0; i <= W; i++) { const v = f((i / W) * T); i ? ctx.lineTo(i, ys(v)) : ctx.moveTo(i, ys(v)); }\n      ctx.stroke();\n    }\n    const d1 = -p1, d3 = -p3 / 3;\n    document.getElementById(\"d1\").textContent = d1.toFixed(2) + \" s\";\n    document.getElementById(\"d3\").textContent = d3.toFixed(2) + \" s\";\n    document.getElementById(\"verdict\").innerHTML = Math.abs(d1 - d3) < 1e-6\n      ? 'Both delayed equally<b style=\"color:var(--good)\">Shape kept: a pure delay</b>'\n      : 'Different delays<b style=\"color:var(--warn)\">Shape distorted</b>';\n    document.getElementById(\"t0v\").textContent = Number(t0.value).toFixed(2);\n    document.getElementById(\"t0l\").style.opacity = mode === \"lin\" ? 1 : 0.4;\n    t0.disabled = mode !== \"lin\";\n  }\n  const set = (m) => {\n    mode = m;\n    document.getElementById(\"lin\").setAttribute(\"aria-pressed\", String(m === \"lin\"));\n    document.getElementById(\"non\").setAttribute(\"aria-pressed\", String(m === \"non\"));\n    draw();\n  };\n  document.getElementById(\"lin\").onclick = () => set(\"lin\");\n  document.getElementById(\"non\").onclick = () => set(\"non\");\n  t0.oninput = draw;\n  new ResizeObserver(draw).observe(c);\n  addEventListener(\"unitute-theme\", draw);\n  draw();\n})();\n</script>",
+              "height": 420
+            },
+            {
+              "id": "b-fr-check-3",
+              "type": "check",
+              "questionId": "q-fr-delay"
+            },
             {
               "id": "b-fr-summary",
               "type": "summary",
@@ -356,7 +622,12 @@
               "type": "multipleChoice",
               "conceptId": "c-frequency-response",
               "prompt": "At some frequency $\\omega_0$ the input has $X(j\\omega_0) = 2\\angle 30^\\circ$ and the system has $H(j\\omega_0) = 0.5\\angle{-90^\\circ}$. What is $Y(j\\omega_0)$?",
-              "options": ["$1\\angle{-60^\\circ}$", "$2.5\\angle{-60^\\circ}$", "$1\\angle 120^\\circ$", "$4\\angle{-120^\\circ}$"],
+              "options": [
+                "$1\\angle{-60^\\circ}$",
+                "$2.5\\angle{-60^\\circ}$",
+                "$1\\angle 120^\\circ$",
+                "$4\\angle{-120^\\circ}$"
+              ],
               "answerIndex": 0,
               "explanation": "Multiply magnitudes: $0.5 \\times 2 = 1$. Add phases: $-90^\\circ + 30^\\circ = -60^\\circ$."
             },
@@ -382,6 +653,41 @@
               "markingGuide": "Must say the output is the input delayed (shifted right) by 3, i.e. $y(t) = x(t-3)$. Full marks also mention that the magnitude is unchanged ($|H| = 1$) because the phase is linear. Saying 'advanced' or $x(t+3)$ is incorrect.",
               "explanation": "This is $e^{-j\\omega t_0}$ with $t_0 = 3$: unit magnitude and linear phase, so every frequency is delayed by the same 3 units."
             }
+          ],
+          "flashcards": [
+            {
+              "front": "What is $H(j\\omega)$?",
+              "back": "The frequency response: the Fourier transform of the impulse response $h(t)$."
+            },
+            {
+              "front": "How do magnitude and phase combine through an LTI system?",
+              "back": "$|Y| = |H||X|$ and $\\angle Y = \\angle H + \\angle X$."
+            },
+            {
+              "front": "What does $H(j\\omega) = e^{-j\\omega t_0}$ do to $x(t)$?",
+              "back": "Delays it by $t_0$: $y(t) = x(t - t_0)$, shape unchanged."
+            },
+            {
+              "front": "Why does nonlinear phase distort a signal?",
+              "back": "Each frequency is delayed by a different amount ($-\\angle H/\\omega$), so the components no longer line up."
+            }
+          ],
+          "formulas": [
+            {
+              "name": "Output spectrum",
+              "latex": "Y(j\\omega) = H(j\\omega)\\, X(j\\omega)",
+              "note": "Convolution in time is multiplication in frequency."
+            },
+            {
+              "name": "Magnitude and phase",
+              "latex": "|Y| = |H||X|, \\quad \\angle Y = \\angle H + \\angle X",
+              "note": "Gains multiply, phases add."
+            },
+            {
+              "name": "Pure delay",
+              "latex": "H(j\\omega) = e^{-j\\omega t_0} \\;\\Rightarrow\\; y(t) = x(t - t_0)",
+              "note": "Linear phase."
+            }
           ]
         }
       ]
@@ -397,7 +703,10 @@
           "title": "Filtering and filters",
           "summary": "Ideal low-pass, high-pass and band-pass filters, their discrete-time versions, and practical RC filters.",
           "estMinutes": 14,
-          "conceptIds": ["c-ideal-filters", "c-practical-filters"],
+          "conceptIds": [
+            "c-ideal-filters",
+            "c-practical-filters"
+          ],
           "blocks": [
             {
               "id": "b-fi-def",
@@ -412,12 +721,18 @@
               "title": "Quick check",
               "markdown": "The delay system $H(j\\omega) = e^{-j\\omega t_0}$ has $|H| = 1$ everywhere. It changes the **phase** of every component but not its **magnitude**, so it isn't a filter in the everyday sense."
             },
-            { "id": "b-fi-h-ideal", "type": "heading", "text": "Ideal filters" },
+            {
+              "id": "b-fi-h-ideal",
+              "type": "heading",
+              "text": "Ideal filters"
+            },
             {
               "id": "b-fi-lpf",
               "type": "text",
               "markdown": "An **ideal low-pass filter (LPF)** keeps every component below the cutoff frequency $\\omega_c$ untouched and completely removes everything above it:",
-              "conceptIds": ["c-ideal-filters"]
+              "conceptIds": [
+                "c-ideal-filters"
+              ]
             },
             {
               "id": "b-fi-lpf-math",
@@ -428,7 +743,9 @@
               "id": "b-fi-others",
               "type": "text",
               "markdown": "- The range that gets through is the **pass band**; the range that's removed is the **stop band**.\n- An **ideal high-pass filter (HPF)** is the opposite: it removes components below $\\omega_c$ and keeps those above.\n- An **ideal band-pass filter (BPF)** keeps only $\\omega_{c1} \\le |\\omega| \\le \\omega_{c2}$ and removes everything else.",
-              "conceptIds": ["c-ideal-filters"]
+              "conceptIds": [
+                "c-ideal-filters"
+              ]
             },
             {
               "id": "b-fi-dt",
@@ -436,15 +753,62 @@
               "variant": "keyIdea",
               "title": "Discrete time repeats every 2π",
               "markdown": "Discrete-time frequency responses are **periodic with period $2\\pi$**, because $e^{j(\\omega + 2\\pi)n} = e^{j\\omega n}$ for every integer $n$. So \"low frequency\" means near $0$ (or any multiple of $2\\pi$), and the highest possible frequency is $\\omega = \\pi$.\n\n- $x[n] = \\cos(\\pi n) = (-1)^n$ flips sign every sample: the fastest a discrete signal can change.\n- $x[n] = \\cos(2\\pi n) = 1$ for all $n$: that's DC, even though $2\\pi$ looks \"bigger\".",
-              "conceptIds": ["c-ideal-filters"]
+              "conceptIds": [
+                "c-ideal-filters"
+              ]
             },
-            { "id": "b-fi-check-1", "type": "check", "questionId": "q-fi-dt-highest" },
-            { "id": "b-fi-h-rc", "type": "heading", "text": "Practical filters: the RC circuit" },
+            {
+              "id": "b-fi-dt-plot",
+              "type": "plot",
+              "title": "Discrete-time frequency wraps around",
+              "x": {
+                "label": "n",
+                "min": -8,
+                "max": 8,
+                "scale": "linear"
+              },
+              "y": {
+                "label": "x[n]",
+                "min": -1.2,
+                "max": 1.2,
+                "scale": "linear"
+              },
+              "params": [
+                {
+                  "name": "w0",
+                  "label": "ω₀ (rad/sample)",
+                  "min": 0,
+                  "max": 6.28,
+                  "step": 0.01,
+                  "value": 3.14
+                }
+              ],
+              "series": [
+                {
+                  "label": "x[n] = cos(ω₀n)",
+                  "expr": "cos(w0*x)",
+                  "style": "stem"
+                }
+              ],
+              "caption": "Slide ω₀ from 0 up to 2π: the sequence changes fastest at ω₀ = π, then slows again, and at 2π it is the same as at 0."
+            },
+            {
+              "id": "b-fi-check-1",
+              "type": "check",
+              "questionId": "q-fi-dt-highest"
+            },
+            {
+              "id": "b-fi-h-rc",
+              "type": "heading",
+              "text": "Practical filters: the RC circuit"
+            },
             {
               "id": "b-fi-rc",
               "type": "text",
               "markdown": "Put a resistor $R$ and capacitor $C$ in series with a source $v_s$. The capacitor's impedance is $\\frac{1}{j\\omega C}$: huge at low frequencies (almost an open circuit) and tiny at high frequencies (almost a short). Which component you take the output across decides the filter type.",
-              "conceptIds": ["c-practical-filters"]
+              "conceptIds": [
+                "c-practical-filters"
+              ]
             },
             {
               "id": "b-fi-rc-math",
@@ -458,7 +822,11 @@
               "title": "No brick walls",
               "markdown": "Real filters roll off gradually instead of jumping from 1 to 0, and the transition band between pass and stop is never zero. A good practical filter keeps the pass band's magnitude and phase as flat as possible."
             },
-            { "id": "b-fi-check-2", "type": "check", "questionId": "q-fi-rc-type" },
+            {
+              "id": "b-fi-check-2",
+              "type": "check",
+              "questionId": "q-fi-rc-type"
+            },
             {
               "id": "b-fi-summary",
               "type": "summary",
@@ -476,7 +844,12 @@
               "type": "multipleChoice",
               "conceptId": "c-ideal-filters",
               "prompt": "Which discrete-time signal has the **highest** frequency?",
-              "options": ["$\\cos(2\\pi n)$", "$\\cos(\\pi n)$", "$\\cos(\\pi n / 4)$", "$\\cos(0.1 n)$"],
+              "options": [
+                "$\\cos(2\\pi n)$",
+                "$\\cos(\\pi n)$",
+                "$\\cos(\\pi n / 4)$",
+                "$\\cos(0.1 n)$"
+              ],
               "answerIndex": 1,
               "explanation": "$\\cos(\\pi n) = (-1)^n$ alternates every sample, the fastest possible change. $\\cos(2\\pi n) = 1$ for every integer $n$, so it's actually DC: discrete-time frequency wraps around every $2\\pi$."
             },
@@ -489,6 +862,41 @@
               "markingGuide": "Must identify low-pass. The reason must refer to the capacitor's impedance falling as frequency rises (or to $H = 1/(1 + j\\omega RC)$ going from 1 to 0). Naming the filter with no reason is only partially correct.",
               "explanation": "The capacitor behaves like an open circuit at DC and a short circuit at high frequency, so the voltage across it passes low frequencies and blocks high ones."
             }
+          ],
+          "flashcards": [
+            {
+              "front": "What does an ideal low-pass filter do?",
+              "back": "Passes $|\\omega| \\le \\omega_c$ unchanged and removes everything above $\\omega_c$."
+            },
+            {
+              "front": "What is the highest frequency a discrete-time signal can have?",
+              "back": "$\\omega = \\pi$ (e.g. $\\cos(\\pi n) = (-1)^n$). Frequencies repeat every $2\\pi$."
+            },
+            {
+              "front": "RC circuit, output across C: which filter?",
+              "back": "Low-pass: $V_c/V_s = 1/(1 + j\\omega RC)$."
+            },
+            {
+              "front": "RC circuit, output across R: which filter?",
+              "back": "High-pass: $V_R/V_s = j\\omega RC/(1 + j\\omega RC)$."
+            }
+          ],
+          "formulas": [
+            {
+              "name": "Ideal low-pass filter",
+              "latex": "H(j\\omega) = \\begin{cases} 1, & |\\omega| \\le \\omega_c \\\\ 0, & |\\omega| > \\omega_c \\end{cases}",
+              "note": "Pass band below ω_c."
+            },
+            {
+              "name": "RC low-pass",
+              "latex": "\\frac{V_c}{V_s} = \\frac{1}{1 + j\\omega RC}",
+              "note": "Output across the capacitor."
+            },
+            {
+              "name": "RC high-pass",
+              "latex": "\\frac{V_R}{V_s} = \\frac{j\\omega RC}{1 + j\\omega RC}",
+              "note": "Output across the resistor."
+            }
           ]
         },
         {
@@ -496,13 +904,18 @@
           "title": "Bode plots and decibels",
           "summary": "Plotting frequency response on logarithmic axes, and the decibel values worth knowing by heart.",
           "estMinutes": 12,
-          "conceptIds": ["c-decibels", "c-bode"],
+          "conceptIds": [
+            "c-decibels",
+            "c-bode"
+          ],
           "blocks": [
             {
               "id": "b-bo-intro",
               "type": "text",
               "markdown": "A frequency response is usually shown as two plots: the **magnitude response** $|H(j\\omega)|$ and the **phase response** $\\angle H(j\\omega)$. A **Bode plot** draws both against a logarithmic frequency axis, with magnitude in decibels.",
-              "conceptIds": ["c-bode"]
+              "conceptIds": [
+                "c-bode"
+              ]
             },
             {
               "id": "b-bo-db",
@@ -514,9 +927,15 @@
               "type": "definition",
               "term": "Decade",
               "markdown": "The span between two frequencies whose ratio is 10, for example from 100 rad/s to 1000 rad/s. On a Bode plot every decade takes up the same width.",
-              "conceptIds": ["c-bode"]
+              "conceptIds": [
+                "c-bode"
+              ]
             },
-            { "id": "b-bo-h-why", "type": "heading", "text": "Why use logs?" },
+            {
+              "id": "b-bo-h-why",
+              "type": "heading",
+              "text": "Why use logs?"
+            },
             {
               "id": "b-bo-why-math",
               "type": "math",
@@ -527,12 +946,18 @@
               "type": "text",
               "markdown": "- **Multiplication becomes addition**, so the response of systems in cascade is just the sum of their plots in dB.\n- A **much wider range of magnitudes** fits on one plot (a gain of 10,000 is only 80 dB).\n- A **much wider range of frequencies** fits too, and straight-line approximations become easy."
             },
-            { "id": "b-bo-h-values", "type": "heading", "text": "dB values worth memorising" },
+            {
+              "id": "b-bo-h-values",
+              "type": "heading",
+              "text": "dB values worth memorising"
+            },
             {
               "id": "b-bo-table",
               "type": "text",
               "markdown": "| $\\lvert H \\rvert$ | $\\lvert H \\rvert_{\\text{dB}}$ |\n| --- | --- |\n| 1 | 0 dB |\n| $\\sqrt{2}$ | 3 dB |\n| 2 | 6 dB |\n| 4 | 12 dB |\n| 5 | 14 dB |\n| 10 | 20 dB |\n| 100 | 40 dB |\n| 1000 | 60 dB |\n| 10000 | 80 dB |",
-              "conceptIds": ["c-decibels"]
+              "conceptIds": [
+                "c-decibels"
+              ]
             },
             {
               "id": "b-bo-trick",
@@ -540,7 +965,9 @@
               "variant": "tip",
               "title": "Build the rest yourself",
               "markdown": "Every factor of 10 adds 20 dB and every factor of 2 adds about 6 dB. So a gain of 20 = 2 × 10 is 6 + 20 = 26 dB. Fractions go negative: 0.1 is −20 dB and $1/\\sqrt{2}$ is −3 dB.",
-              "conceptIds": ["c-decibels"]
+              "conceptIds": [
+                "c-decibels"
+              ]
             },
             {
               "id": "b-bo-example",
@@ -553,8 +980,16 @@
               ],
               "answer": "14 dB (a linear gain of 5)"
             },
-            { "id": "b-bo-check-1", "type": "check", "questionId": "q-bo-1000" },
-            { "id": "b-bo-check-2", "type": "check", "questionId": "q-bo-half-power" },
+            {
+              "id": "b-bo-check-1",
+              "type": "check",
+              "questionId": "q-bo-1000"
+            },
+            {
+              "id": "b-bo-check-2",
+              "type": "check",
+              "questionId": "q-bo-half-power"
+            },
             {
               "id": "b-bo-summary",
               "type": "summary",
@@ -571,7 +1006,12 @@
               "type": "multipleChoice",
               "conceptId": "c-decibels",
               "prompt": "A system has $|H(j\\omega)| = 1000$ at some frequency. What is that in dB?",
-              "options": ["30 dB", "60 dB", "100 dB", "1000 dB"],
+              "options": [
+                "30 dB",
+                "60 dB",
+                "100 dB",
+                "1000 dB"
+              ],
               "answerIndex": 1,
               "explanation": "$20\\log_{10}1000 = 20 \\times 3 = 60$ dB. 30 dB would be the answer with $10\\log_{10}$, which is for power, not amplitude."
             },
@@ -580,9 +1020,44 @@
               "type": "multipleChoice",
               "conceptId": "c-decibels",
               "prompt": "What is $|H| = 1/\\sqrt{2} \\approx 0.707$ in dB?",
-              "options": ["−3 dB", "−6 dB", "+3 dB", "−0.7 dB"],
+              "options": [
+                "−3 dB",
+                "−6 dB",
+                "+3 dB",
+                "−0.7 dB"
+              ],
               "answerIndex": 0,
               "explanation": "$20\\log_{10}(1/\\sqrt{2}) = -10\\log_{10}2 \\approx -3$ dB. You'll see this value again at a first-order system's break frequency."
+            }
+          ],
+          "flashcards": [
+            {
+              "front": "How is magnitude written in dB?",
+              "back": "$|H|_{\\text{dB}} = 20\\log_{10}|H|$."
+            },
+            {
+              "front": "A gain of 10 is how many dB? A gain of 2?",
+              "back": "20 dB and about 6 dB."
+            },
+            {
+              "front": "What is $1/\\sqrt{2}$ in dB?",
+              "back": "About −3 dB."
+            },
+            {
+              "front": "Why do cascaded systems add on a Bode plot?",
+              "back": "$\\log|Y| = \\log|H| + \\log|X|$: multiplication becomes addition."
+            }
+          ],
+          "formulas": [
+            {
+              "name": "Decibels",
+              "latex": "|H(j\\omega)|_{\\text{dB}} = 20\\log_{10}|H(j\\omega)|",
+              "note": "For amplitude ratios."
+            },
+            {
+              "name": "Cascade in dB",
+              "latex": "\\log|Y(j\\omega)| = \\log|H(j\\omega)| + \\log|X(j\\omega)|",
+              "note": "Stages add."
             }
           ]
         },
@@ -591,31 +1066,61 @@
           "title": "First- and second-order systems",
           "summary": "Measuring real systems, then how the time constant and damping ratio shape responses in time and frequency.",
           "estMinutes": 20,
-          "conceptIds": ["c-impulse-step", "c-first-order", "c-second-order"],
+          "conceptIds": [
+            "c-impulse-step",
+            "c-first-order",
+            "c-second-order"
+          ],
           "blocks": [
-            { "id": "b-so-h-measure", "type": "heading", "text": "Measuring a real system" },
+            {
+              "id": "b-so-h-measure",
+              "type": "heading",
+              "text": "Measuring a real system"
+            },
             {
               "id": "b-so-impulse",
               "type": "text",
               "markdown": "In theory, feeding in $\\delta(t)$ gives $h(t)$ directly. In practice an ideal impulse (infinite amplitude, zero duration) can't be generated. Instead we use a **narrow pulse** of height $A$ and width $\\Delta t$ with area $A\\,\\Delta t \\approx 1$, where $\\Delta t$ is much shorter than the system's own response time.\n\nExamples: striking a structure with an instrumented hammer, sending a very short voltage pulse into an RC circuit, or transmitting a short RF pulse through a channel.",
-              "conceptIds": ["c-impulse-step"]
+              "conceptIds": [
+                "c-impulse-step"
+              ]
             },
             {
               "id": "b-so-step",
               "type": "text",
               "markdown": "A **step** $u(t)$ is much easier to produce: just flip a switch (apply a DC voltage, command a motor to a fixed speed, apply a constant force). Because $\\frac{du(t)}{dt} = \\delta(t)$, the impulse response is the derivative of the step response $s(t)$:",
-              "conceptIds": ["c-impulse-step"]
+              "conceptIds": [
+                "c-impulse-step"
+              ]
             },
-            { "id": "b-so-step-math", "type": "math", "latex": "h(t) = \\frac{ds(t)}{dt}" },
-            { "id": "b-so-check-1", "type": "check", "questionId": "q-so-measure" },
-            { "id": "b-so-h-first", "type": "heading", "text": "First-order systems" },
+            {
+              "id": "b-so-step-math",
+              "type": "math",
+              "latex": "h(t) = \\frac{ds(t)}{dt}"
+            },
+            {
+              "id": "b-so-check-1",
+              "type": "check",
+              "questionId": "q-so-measure"
+            },
+            {
+              "id": "b-so-h-first",
+              "type": "heading",
+              "text": "First-order systems"
+            },
             {
               "id": "b-so-first-examples",
               "type": "text",
               "markdown": "Two very different systems give the same kind of equation:\n\n- **RC circuit**, input $v_s$, output $v_c$: $\\;\\frac{dv_c}{dt} + \\frac{1}{RC}v_c = \\frac{1}{RC}v_s$\n- **Car** with engine force $f$ and friction $\\rho v$: $\\;\\frac{dv}{dt} + \\frac{\\rho}{m}v = \\frac{1}{m}f$\n\nBoth fit the general first-order form:",
-              "conceptIds": ["c-first-order"]
+              "conceptIds": [
+                "c-first-order"
+              ]
             },
-            { "id": "b-so-first-form", "type": "math", "latex": "\\tau\\frac{dy(t)}{dt} + y(t) = x(t)" },
+            {
+              "id": "b-so-first-form",
+              "type": "math",
+              "latex": "\\tau\\frac{dy(t)}{dt} + y(t) = x(t)"
+            },
             {
               "id": "b-so-first-derive",
               "type": "workedExample",
@@ -631,22 +1136,113 @@
               "id": "b-so-first-time",
               "type": "text",
               "markdown": "In the time domain:\n\n- Impulse response: $h(t) = \\frac{1}{\\tau}e^{-t/\\tau}u(t)$\n- Step response: $s(t) = \\left(1 - e^{-t/\\tau}\\right)u(t)$\n\n$\\tau$ is the **time constant**. A smaller $\\tau$ means $h(t)$ decays faster and $s(t)$ rises faster. After one time constant the step response has reached about 63% of its final value.",
-              "conceptIds": ["c-first-order"]
+              "conceptIds": [
+                "c-first-order"
+              ]
+            },
+            {
+              "id": "b-so-step-plot",
+              "type": "plot",
+              "title": "First-order step response",
+              "x": {
+                "label": "t (s)",
+                "min": 0,
+                "max": 5,
+                "scale": "linear"
+              },
+              "y": {
+                "label": "s(t)",
+                "min": 0,
+                "max": 1.2,
+                "scale": "linear"
+              },
+              "params": [
+                {
+                  "name": "tau",
+                  "label": "Time constant τ (s)",
+                  "min": 0.1,
+                  "max": 2,
+                  "step": 0.05,
+                  "value": 0.5
+                }
+              ],
+              "series": [
+                {
+                  "label": "s(t) = (1 − e^(−t/τ)) u(t)",
+                  "expr": "(1 - exp(-x/tau))*u(x)",
+                  "style": "line"
+                },
+                {
+                  "label": "63% of the final value",
+                  "expr": "0.632",
+                  "style": "line"
+                }
+              ],
+              "caption": "Drag τ: the curve reaches 63% of its final value at t = τ."
             },
             {
               "id": "b-so-first-bode",
               "type": "text",
               "markdown": "On a Bode plot, $|H|_{\\text{dB}} = -10\\log_{10}(1 + \\omega^2\\tau^2)$ is well approximated by **two straight lines**:\n\n- For $\\omega \\ll 1/\\tau$: about **0 dB** (flat).\n- For $\\omega \\gg 1/\\tau$: about $-20\\log_{10}(\\omega\\tau)$, a slope of **−20 dB per decade**.\n\nThey meet at the **break frequency** $\\omega = 1/\\tau$, where the true curve is −3 dB.\n\nThe phase $\\angle H = -\\arctan(\\omega\\tau)$ uses **three lines**: about 0 below $0.1/\\tau$, about $-\\pi/2$ above $10/\\tau$, and a straight drop between them passing through $-\\pi/4$ at the break frequency.",
-              "conceptIds": ["c-first-order", "c-bode"]
+              "conceptIds": [
+                "c-first-order",
+                "c-bode"
+              ]
+            },
+            {
+              "id": "b-so-bode-plot",
+              "type": "plot",
+              "title": "First-order Bode magnitude",
+              "x": {
+                "label": "ω (rad/s)",
+                "min": 0.1,
+                "max": 1000,
+                "scale": "log"
+              },
+              "y": {
+                "label": "|H(jω)| (dB)",
+                "min": -50,
+                "max": 5,
+                "scale": "linear"
+              },
+              "params": [
+                {
+                  "name": "tau",
+                  "label": "Time constant τ (s)",
+                  "min": 0.005,
+                  "max": 1,
+                  "step": 0.005,
+                  "value": 0.1
+                }
+              ],
+              "series": [
+                {
+                  "label": "Exact",
+                  "expr": "-10*log10(1 + (x*tau)^2)",
+                  "style": "line"
+                },
+                {
+                  "label": "Straight-line approximation",
+                  "expr": "min(0, -20*log10(x*tau))",
+                  "style": "line"
+                }
+              ],
+              "caption": "The two lines meet at the break frequency ω = 1/τ, where the exact curve is 3 dB lower. Above it the slope is −20 dB per decade."
             },
             {
               "id": "b-so-tau-key",
               "type": "callout",
               "variant": "keyIdea",
               "markdown": "For first-order systems, $\\tau$ scales **both** time and frequency. A fast system (small $\\tau$) has a high break frequency $1/\\tau$, so it passes a wider band of frequencies.",
-              "conceptIds": ["c-first-order"]
+              "conceptIds": [
+                "c-first-order"
+              ]
             },
-            { "id": "b-so-check-2", "type": "check", "questionId": "q-so-first-db" },
+            {
+              "id": "b-so-check-2",
+              "type": "check",
+              "questionId": "q-so-first-db"
+            },
             {
               "id": "b-so-ideal-vs-rc",
               "type": "callout",
@@ -654,12 +1250,18 @@
               "title": "A perfect frequency response isn't everything",
               "markdown": "The RC low-pass filter's step response rises smoothly with no oscillation, so it's easy to settle. An *ideal* low-pass filter's step response rings (oscillates). Even with a perfect frequency response, an ideal filter may not give the time-domain behaviour you want."
             },
-            { "id": "b-so-h-second", "type": "heading", "text": "Second-order systems" },
+            {
+              "id": "b-so-h-second",
+              "type": "heading",
+              "text": "Second-order systems"
+            },
             {
               "id": "b-so-second-intro",
               "type": "text",
               "markdown": "A mass $m$ on a spring (constant $k$) with a viscous damper (coefficient $b$), driven by force $x(t)$, obeys Newton's second law: $m\\frac{d^2y}{dt^2} = x - ky - b\\frac{dy}{dt}$. RLC circuits have the same form. Normalised, a second-order system is:",
-              "conceptIds": ["c-second-order"]
+              "conceptIds": [
+                "c-second-order"
+              ]
             },
             {
               "id": "b-so-second-form",
@@ -670,22 +1272,37 @@
               "id": "b-so-second-params",
               "type": "text",
               "markdown": "- $\\omega_n = \\sqrt{k/m}$ is the **undamped natural frequency**.\n- $\\xi = \\dfrac{b}{2\\sqrt{km}}$ is the **damping ratio**.\n\n(For the mass-spring system the right-hand side carries an extra gain of $1/k$; the shape of the response is the same.)",
-              "conceptIds": ["c-second-order"]
+              "conceptIds": [
+                "c-second-order"
+              ]
             },
             {
               "id": "b-so-damping",
               "type": "text",
               "markdown": "| Damping ratio | Name | Step response |\n| --- | --- | --- |\n| $0 < \\xi < 1$ | Underdamped | Overshoots and oscillates before settling |\n| $\\xi = 1$ | Critically damped | Fastest rise with no overshoot |\n| $\\xi > 1$ | Overdamped | No overshoot, but slow to rise |",
-              "conceptIds": ["c-second-order"]
+              "conceptIds": [
+                "c-second-order"
+              ]
             },
             {
               "id": "b-so-second-bode",
               "type": "text",
               "markdown": "In frequency, the magnitude is flat below $\\omega_n$ and falls at **−40 dB per decade** above it, twice as steep as first order. The phase goes from 0 to $-\\pi$, passing $-\\pi/2$ at $\\omega_n$. Small $\\xi$ produces a resonant peak near $\\omega_n$.",
-              "conceptIds": ["c-second-order", "c-bode"]
+              "conceptIds": [
+                "c-second-order",
+                "c-bode"
+              ]
             },
-            { "id": "b-so-check-3", "type": "check", "questionId": "q-so-damping-order" },
-            { "id": "b-so-check-4", "type": "check", "questionId": "q-so-second-slope" },
+            {
+              "id": "b-so-check-3",
+              "type": "check",
+              "questionId": "q-so-damping-order"
+            },
+            {
+              "id": "b-so-check-4",
+              "type": "check",
+              "questionId": "q-so-second-slope"
+            },
             {
               "id": "b-so-summary",
               "type": "summary",
@@ -717,7 +1334,12 @@
               "type": "multipleChoice",
               "conceptId": "c-first-order",
               "prompt": "A first-order low-pass system has $\\tau = 1$ ms. Roughly what is its magnitude at $\\omega = 10{,}000$ rad/s?",
-              "options": ["0 dB", "−3 dB", "−20 dB", "−40 dB"],
+              "options": [
+                "0 dB",
+                "−3 dB",
+                "−20 dB",
+                "−40 dB"
+              ],
               "answerIndex": 2,
               "explanation": "The break frequency is $1/\\tau = 1000$ rad/s. $10{,}000$ rad/s is one decade above it, and above the break the magnitude falls at 20 dB per decade, so it's about −20 dB. (Exactly: $-10\\log_{10}(1 + 100) \\approx -20.04$ dB.)"
             },
@@ -726,7 +1348,12 @@
               "type": "ordering",
               "conceptId": "c-second-order",
               "prompt": "Order these damping ratios from the **most** oscillatory step response to the **least**.",
-              "items": ["$\\xi = 0.1$", "$\\xi = 0.5$", "$\\xi = 1$", "$\\xi = 2$"],
+              "items": [
+                "$\\xi = 0.1$",
+                "$\\xi = 0.5$",
+                "$\\xi = 1$",
+                "$\\xi = 2$"
+              ],
               "explanation": "Oscillation shrinks as damping grows. $\\xi = 0.1$ and $0.5$ are both underdamped (0.1 rings much more), $\\xi = 1$ is critically damped, and $\\xi = 2$ is overdamped with no overshoot at all."
             },
             {
@@ -734,9 +1361,58 @@
               "type": "multipleChoice",
               "conceptId": "c-second-order",
               "prompt": "Well above its natural frequency $\\omega_n$, how fast does a second-order low-pass system's magnitude fall?",
-              "options": ["−10 dB per decade", "−20 dB per decade", "−40 dB per decade", "−60 dB per decade"],
+              "options": [
+                "−10 dB per decade",
+                "−20 dB per decade",
+                "−40 dB per decade",
+                "−60 dB per decade"
+              ],
               "answerIndex": 2,
               "explanation": "At high frequency the $(j\\omega)^2$ term dominates the denominator, so $|H| \\propto 1/\\omega^2$: that's $2 \\times 20 = 40$ dB per decade."
+            }
+          ],
+          "flashcards": [
+            {
+              "front": "How do you get $h(t)$ from a measured step response?",
+              "back": "Differentiate it: $h(t) = \\dfrac{ds(t)}{dt}$."
+            },
+            {
+              "front": "First-order frequency response?",
+              "back": "$H(j\\omega) = \\dfrac{1}{1 + j\\omega\\tau}$: break frequency $1/\\tau$, −20 dB/decade above it."
+            },
+            {
+              "front": "What does the time constant $\\tau$ tell you?",
+              "back": "How fast the system responds: the step response reaches about 63% at $t = \\tau$."
+            },
+            {
+              "front": "Underdamped, critically damped, overdamped?",
+              "back": "$0 < \\xi < 1$ oscillates; $\\xi = 1$ is fastest with no overshoot; $\\xi > 1$ is slow with no overshoot."
+            },
+            {
+              "front": "Second-order high-frequency slope?",
+              "back": "−40 dB per decade."
+            }
+          ],
+          "formulas": [
+            {
+              "name": "First-order system",
+              "latex": "\\tau\\frac{dy(t)}{dt} + y(t) = x(t)",
+              "note": ""
+            },
+            {
+              "name": "First-order frequency response",
+              "latex": "H(j\\omega) = \\frac{1}{1 + j\\omega\\tau}",
+              "note": "Break frequency ω = 1/τ."
+            },
+            {
+              "name": "First-order responses",
+              "latex": "h(t) = \\tfrac{1}{\\tau}e^{-t/\\tau}u(t), \\quad s(t) = (1 - e^{-t/\\tau})u(t)",
+              "note": ""
+            },
+            {
+              "name": "Second-order system",
+              "latex": "H(j\\omega) = \\frac{\\omega_n^2}{(j\\omega)^2 + 2\\xi\\omega_n(j\\omega) + \\omega_n^2}",
+              "note": "ω_n natural frequency, ξ damping ratio."
             }
           ]
         }

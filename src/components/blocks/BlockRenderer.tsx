@@ -2,10 +2,13 @@ import type { Block, Question } from "@/lib/course/schema";
 import { CalloutBlock } from "./CalloutBlock";
 import { CheckBlock } from "./CheckBlock";
 import { CodeBlock } from "./CodeBlock";
+import { DiagramBlock } from "./DiagramBlock";
 import { DefinitionBlock } from "./DefinitionBlock";
 import { Markdown } from "./Markdown";
 import { MathBlock } from "./MathBlock";
+import { PlotBlock } from "./PlotBlock";
 import { SummaryBlock } from "./SummaryBlock";
+import { WidgetBlock } from "./WidgetBlock";
 import { WorkedExampleBlock } from "./WorkedExampleBlock";
 
 type BlockRendererProps = {
@@ -42,6 +45,16 @@ function BlockContent({ block, questions, questionIds }: BlockRendererProps) {
       return <MathBlock block={block} />;
     case "summary":
       return <SummaryBlock block={block} />;
+    case "plot":
+      return (
+        <PlotBlock
+          spec={{ title: block.title, caption: block.caption, x: block.x, y: block.y, params: block.params, series: block.series }}
+        />
+      );
+    case "diagram":
+      return <DiagramBlock block={block} />;
+    case "widget":
+      return <WidgetBlock block={block} />;
     case "check": {
       const question = questions.get(block.questionId);
       return question ? <CheckBlock question={question} questionDbId={questionIds.get(question.id)!} /> : null;

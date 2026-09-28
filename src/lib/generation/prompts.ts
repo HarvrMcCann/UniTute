@@ -80,7 +80,7 @@ Plan the course.`;
 const exampleLesson = (() => {
   const course = courseSchema.parse(sample);
   const lesson = course.units[0].lessons[2]; // "Frequency response of LTI systems": every block type we care about
-  return JSON.stringify(lessonToDraft(lesson), null, 1);
+  return JSON.stringify(lessonToDraft(lesson).content, null, 1);
 })();
 
 export const LESSON_SYSTEM = `You write lessons for UniTute, an app that turns a unit's lecture slides and readings into an interactive course. A student reads your lesson on a phone or laptop, answers knowledge checks along the way, and can ask an AI tutor about any part of it.
@@ -105,6 +105,15 @@ Blocks:
 - code: only for programming content.
 - summary: the last block, 3-5 points.
 - check: places a question, right after the section it tests.
+
+Visuals and interactives. You have real creative freedom here: choose whatever teaches this lesson best. Most lessons should include at least one of these, placed right where it helps, and none should be decoration.
+- plot: graphs of formulas the app draws. Use it to show a shape or a relationship, and add sliders (params) so the student can see how a parameter changes it (a time constant in a step response, a damping ratio, a cutoff frequency). Formulas are in x and the param names, using + - * / ^ ( ), numbers, pi, e and these functions: sin cos tan asin acos atan sinh cosh tanh exp ln log10 log (= log10) sqrt abs sign min max pow mod floor ceil round u (unit step) rect sinc deg rad. Real numbers only: write magnitudes and phases out explicitly (e.g. "-10*log10(1 + (x*tau)^2)" or "-deg(atan(x*tau))"). Log x axes suit Bode plots and anything over decades; use style "stem" for discrete-time sequences (evaluated at integer x). Up to 5 series and 4 sliders; label the axes with units.
+- diagram: a clean SVG drawing: circuits, block diagrams, labelled sketches, geometry, timelines. A single <svg> with a viewBox (about 700 wide), no scripts, links or external images. Colour everything with these variables inside style attributes or an inner <style> (the app sets them for light and dark themes): var(--ink) for lines and text, var(--muted), var(--accent), var(--accent-2), var(--accent-3), var(--warn), var(--panel) for soft fills. Transparent background; text 14-18 units; keep labels in the course's notation.
+- interactive: your own custom interactive that a developer builds from your brief: a simulation, a builder, a manipulable model, an explorable (for electronics, a small circuit builder; for probability, a sampling simulator; for a process, a step-through animation). Use one when doing something with the idea teaches what reading can't. Be ambitious and specific: the brief is the complete spec (what's shown, every control, how it responds, the insight the student should reach, sensible defaults and ranges, the notation to use). At most two per lesson (one in CRAM). Also give a fallback explanation shown if it can't be built.
+
+Study tools (gathered into each unit's flashcard deck and formula sheet):
+- flashcards: 3-8 per lesson covering the key terms, relationships and "what happens if" facts. Front: a short prompt or term; back: a concise answer. Course notation.
+- formulas: the formulas from this lesson worth having on a formula sheet (0-6), each with a name, the LaTeX (as in a math block), and a short note on what it means or when to use it.
 
 Knowledge checks:
 - Test understanding and application, not recall of wording. Each question's conceptKey must be one of the lesson's concepts.
@@ -154,4 +163,40 @@ ${lesson.plan || "(no plan given: teach the lesson's summary using the sources)"
 
 function escapeAttr(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+// ---------- Interactives ----------
+
+export const WIDGET_SYSTEM = `You build small, polished interactive learning tools for UniTute lessons: simulations, builders, manipulable models and explorables. A lesson writer gives you a brief; you return the widget's code.
+
+The environment (strict; anything else will not work):
+- Your code is the <body> content of a page inside a sandboxed iframe: <style>, HTML and inline <script> only. Vanilla JavaScript (modern syntax is fine). Canvas and inline SVG are available.
+- No network at all: no external scripts, libraries, fonts, images or fetch. Everything must be self-contained. No forms, alerts, pop-ups, storage or navigation.
+- The frame is the lesson's width: about 700px on a laptop and as narrow as 320px on a phone. Lay out responsively (flex-wrap, percentages, canvas sized to its container and redrawn on resize). The frame's height follows your content automatically.
+- Colours: use only these CSS variables, which follow the app's light or dark theme: --ink (text, lines), --muted, --faint, --accent, --accent-2, --accent-3, --warn, --good, --bad, --panel (soft fills), --line (borders), --control (input backgrounds). Background stays transparent. For canvas, read colours with getComputedStyle(document.documentElement).getPropertyValue("--ink") and redraw on window "unitute-theme" events.
+- Buttons, inputs, selects and range sliders are already styled; add class "primary" to a main action button. Default font is inherited: don't set font-family.
+- Maths as plain Unicode text (ω, τ, ξ, ∠, ², ½, ≈, →), not LaTeX.
+
+Quality bar:
+- It must teach the brief's insight: the thing the student should notice is visible, labelled and responsive to their actions.
+- Use the course's notation exactly as given in the brief.
+- Start in a meaningful state (not blank) and label every control with its quantity and units. Show live readouts of key values.
+- Touch-friendly (no hover-only interactions; targets at least 32px), keyboard-usable where practical.
+- Smooth but light: requestAnimationFrame for animation, no busy loops, cap work per frame. Physically and mathematically correct.
+- Clean, calm visual design consistent with a modern learning app: generous spacing, rounded corners, clear hierarchy.
+- Robust: guard against invalid input and extreme values; never throw.
+
+Return the body HTML, and the height in CSS pixels the widget needs at 700px wide.`;
+
+export function widgetRequest(input: { courseTitle: string; lessonTitle: string; lessonPlan: string; title: string; brief: string }): string {
+  return `Course: ${input.courseTitle}
+Lesson: ${input.lessonTitle}
+
+What the lesson covers, including the course's notation:
+${input.lessonPlan || "(not given)"}
+
+Interactive to build: ${input.title}
+<brief>
+${input.brief}
+</brief>`;
 }

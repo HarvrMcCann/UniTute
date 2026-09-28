@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { LinkPending } from "@/components/ui/LinkPending";
 import { ArrowLeftIcon, ChevronIcon } from "@/components/ui/icons";
@@ -21,6 +22,7 @@ type CurriculumNavProps = {
 
 export function CurriculumNav({ outline, currentLessonId, onNavigate }: CurriculumNavProps) {
   const { statusOf } = useProgress();
+  const currentPath = usePathname();
   const [collapsedUnits, setCollapsedUnits] = useState<Set<string>>(new Set());
   const lessonNumbers = new Map(
     outline.units.flatMap((u) => u.lessons).map((lesson, i) => [lesson.id, i + 1]),
@@ -114,10 +116,58 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
                   );
                 })}
               </ul>
+              {!collapsed && (unit.flashcardCount > 0 || unit.formulaCount > 0) && (
+                <div className="flex flex-wrap gap-1.5 pb-1 pl-8 pr-3 pt-1.5">
+                  {unit.flashcardCount > 0 && (
+                    <StudyToolLink
+                      href={`/course/${outline.id}/unit/${unit.id}/flashcards`}
+                      current={currentPath === `/course/${outline.id}/unit/${unit.id}/flashcards`}
+                      onNavigate={onNavigate}
+                    >
+                      Flashcards · {unit.flashcardCount}
+                    </StudyToolLink>
+                  )}
+                  {unit.formulaCount > 0 && (
+                    <StudyToolLink
+                      href={`/course/${outline.id}/unit/${unit.id}/formulas`}
+                      current={currentPath === `/course/${outline.id}/unit/${unit.id}/formulas`}
+                      onNavigate={onNavigate}
+                    >
+                      Formula sheet
+                    </StudyToolLink>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
     </nav>
+  );
+}
+
+function StudyToolLink({
+  href,
+  current,
+  onNavigate,
+  children,
+}: {
+  href: string;
+  current: boolean;
+  onNavigate?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      aria-current={current ? "page" : undefined}
+      className={`pressable relative overflow-hidden rounded-full border px-2.5 py-1 text-xs transition-colors ${
+        current ? "border-accent bg-accent-soft text-text" : "border-line text-muted hover:border-accent/40 hover:text-text"
+      }`}
+    >
+      {children}
+      <LinkPending />
+    </Link>
   );
 }

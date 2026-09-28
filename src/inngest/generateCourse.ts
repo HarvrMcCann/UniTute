@@ -2,13 +2,15 @@ import { NonRetriableError } from "inngest";
 import type { CoursePlan } from "@/lib/generation/assemble";
 import { GenerationError } from "@/lib/generation/claude";
 import {
+  buildWidget,
   generateLessonContent,
+  interactiveRequests,
   generateOutline,
   loadCourseInputs,
   saveGeneratedCourse,
   setProgress,
 } from "@/lib/generation/pipeline";
-import type { LessonContent } from "@/lib/generation/schemas";
+import type { LessonContent, LessonResult, WidgetBuild } from "@/lib/generation/schemas";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inngest } from "./client";
 
@@ -58,19 +60,31 @@ export const generateCourse = inngest.createFunction(
       }),
     ) as CoursePlan;
 
-    const contents: Record<string, LessonContent> = {};
+    const contents: Record<string, LessonResult> = {};
     for (let i = 0; i < plan.units.length; i += PARALLEL_UNITS) {
       const batch = plan.units.slice(i, i + PARALLEL_UNITS);
       await Promise.all(
         batch.map(async (unit) => {
           for (const lesson of unit.lessons) {
-            contents[lesson.id] = (await step.run(`lesson ${lesson.id}`, () =>
+            const content = (await step.run(`lesson ${lesson.id}`, () =>
               guard(async () => {
                 const admin = createAdminClient();
                 const inputs = await loadCourseInputs(admin, courseId);
                 return generateLessonContent(admin, inputs, plan, unit.id, lesson.id);
               }),
             )) as LessonContent;
+            // Each interactive is its own step (built in parallel); a failed one becomes null.
+            const widgets = await Promise.all(
+              interactiveRequests(content).map(
+                (request, i) =>
+                  step.run(`widget ${lesson.id} ${i + 1}`, async () => {
+                    const admin = createAdminClient();
+                    const inputs = await loadCourseInputs(admin, courseId);
+                    return buildWidget(admin, inputs, plan, lesson.id, i, request);
+                  }) as Promise<WidgetBuild | null>,
+              ),
+            );
+            contents[lesson.id] = { content, widgets };
           }
         }),
       );

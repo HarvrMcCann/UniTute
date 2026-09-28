@@ -281,3 +281,22 @@ body {
   animation: pending-sweep 1.1s ease-in-out infinite;
   background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
 }
+
+/* ---------- Print (formula sheets) ---------- */
+
+@media print {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --bg: #ffffff;
+    --text: #111111;
+    --text-muted: #444444;
+    --text-faint: #666666;
+    --panel: transparent;
+    --panel-border: #cccccc;
+    color-scheme: light;
+  }
+  .frost {
+    backdrop-filter: none;
+  }
+}

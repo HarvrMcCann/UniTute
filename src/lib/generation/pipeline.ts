@@ -3,8 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { saveCourse } from "@/lib/course/save";
 import { assembleCourse, planFromOutline, type CoursePlan, type LengthMode, type PlannedUnit } from "./assemble";
 import { callStructured, GENERATION_MODEL, type Usage } from "./claude";
-import { courseOutlineText, LESSON_SYSTEM, lessonRequest, OUTLINE_SYSTEM, outlinePrompt } from "./prompts";
-import { lessonContentSchema, outlineSchema, type LessonContent } from "./schemas";
+import { courseOutlineText, LESSON_SYSTEM, lessonRequest, OUTLINE_SYSTEM, outlinePrompt, WIDGET_SYSTEM, widgetRequest } from "./prompts";
+import { lessonContentSchema, outlineSchema, widgetBuildSchema, type LessonContent, type LessonResult, type WidgetBuild } from "./schemas";
 
 /*
  * The steps of course generation as plain async functions (admin client in, data out),
@@ -178,11 +178,52 @@ export async function generateLessonContent(
     system: LESSON_SYSTEM,
     content,
     schema: lessonContentSchema,
-    maxTokens: 24_000,
+    maxTokens: 32_000,
     effort: "medium",
   });
   await logUsage(admin, inputs.courseId, `lesson ${lesson.id}`, usage, durationMs);
   return data;
+}
+
+// ---------- Interactives ----------
+
+/** The interactive blocks a lesson asked for, in order (their builds line up with this list). */
+export function interactiveRequests(content: LessonContent) {
+  return content.blocks.flatMap((b) => (b.type === "interactive" ? [b] : []));
+}
+
+/**
+ * Builds one interactive from its brief. Never throws: a failed build returns null and the
+ * lesson shows the brief's fallback explanation instead.
+ */
+export async function buildWidget(
+  admin: SupabaseClient,
+  inputs: CourseInputs,
+  plan: CoursePlan,
+  lessonId: string,
+  index: number,
+  request: { title: string; brief: string },
+): Promise<WidgetBuild | null> {
+  const lesson = plan.units.flatMap((u) => u.lessons).find((l) => l.id === lessonId)!;
+  try {
+    const { data, usage, durationMs } = await callStructured({
+      system: WIDGET_SYSTEM,
+      content: [
+        {
+          type: "text",
+          text: widgetRequest({ courseTitle: plan.title, lessonTitle: lesson.title, lessonPlan: lesson.plan, title: request.title, brief: request.brief }),
+        },
+      ],
+      schema: widgetBuildSchema,
+      maxTokens: 24_000,
+      effort: "high",
+    });
+    await logUsage(admin, inputs.courseId, `widget ${lessonId} #${index + 1}`, usage, durationMs);
+    return data.html.trim() ? data : null;
+  } catch (error) {
+    console.warn(`widget ${lessonId} #${index + 1} failed: ${error instanceof Error ? error.message : error}`);
+    return null;
+  }
 }
 
 // ---------- Save ----------
@@ -191,7 +232,7 @@ export async function saveGeneratedCourse(
   admin: SupabaseClient,
   inputs: CourseInputs,
   plan: CoursePlan,
-  contents: Record<string, LessonContent>,
+  contents: Record<string, LessonResult>,
 ): Promise<void> {
   const course = assembleCourse(plan, contents, {
     university: inputs.university ?? undefined,

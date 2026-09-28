@@ -8,13 +8,15 @@
 import { createAdminClient } from "../src/lib/supabase/admin";
 import { estimateCostUsd, type Usage } from "../src/lib/generation/claude";
 import {
+  buildWidget,
   generateLessonContent,
+  interactiveRequests,
   generateOutline,
   loadCourseInputs,
   saveGeneratedCourse,
   setProgress,
 } from "../src/lib/generation/pipeline";
-import type { LessonContent } from "../src/lib/generation/schemas";
+import type { LessonResult } from "../src/lib/generation/schemas";
 
 async function main() {
   const [courseId, mode, flag] = process.argv.slice(2);
@@ -40,13 +42,23 @@ async function main() {
   }
 
   await setProgress(admin, courseId, { stage: "lessons", total: lessons.length });
-  const contents: Record<string, LessonContent> = {};
+  const contents: Record<string, LessonResult> = {};
   for (const unit of plan.units) {
     for (const lesson of unit.lessons) {
       t = Date.now();
-      contents[lesson.id] = await generateLessonContent(admin, inputs, plan, unit.id, lesson.id);
-      const c = contents[lesson.id];
-      console.log(`  ${lesson.title}: ${((Date.now() - t) / 1000).toFixed(0)}s, ${c.blocks.length} blocks, ${c.questions.length} questions`);
+      const content = await generateLessonContent(admin, inputs, plan, unit.id, lesson.id);
+      const kinds = content.blocks.map((b) => b.type);
+      const count = (k: string) => kinds.filter((x) => x === k).length;
+      console.log(
+        `  ${lesson.title}: ${((Date.now() - t) / 1000).toFixed(0)}s, ${content.blocks.length} blocks, ${content.questions.length} questions, ` +
+          `${count("plot")} plots, ${count("diagram")} diagrams, ${count("interactive")} interactives, ${content.flashcards.length} cards, ${content.formulas.length} formulas`,
+      );
+      t = Date.now();
+      const requests = interactiveRequests(content);
+      const widgets = await Promise.all(requests.map((r, i) => buildWidget(admin, inputs, plan, lesson.id, i, r)));
+      if (requests.length)
+        console.log(`    interactives: ${widgets.map((w, i) => `"${requests[i].title}" ${w ? `ok (${(w.html.length / 1024).toFixed(0)} KB)` : "FAILED"}`).join(", ")} in ${((Date.now() - t) / 1000).toFixed(0)}s`);
+      contents[lesson.id] = { content, widgets };
     }
   }
 

@@ -3,7 +3,7 @@ import sample from "@/content/sample-course.json";
 import { courseSchema } from "@/lib/course/schema";
 import { assembleCourse, buildLesson, planFromOutline, shuffleOptions, slugify, type CoursePlan } from "@/lib/generation/assemble";
 import { lessonToDraft } from "@/lib/generation/examples";
-import type { LessonContent, Outline } from "@/lib/generation/schemas";
+import type { LessonResult, Outline } from "@/lib/generation/schemas";
 
 const course = courseSchema.parse(sample);
 
@@ -61,7 +61,7 @@ describe("planFromOutline", () => {
 
 describe("assembleCourse", () => {
   const plan = planFromOutline(outline, opts);
-  const contents: Record<string, LessonContent> = {};
+  const contents: Record<string, LessonResult> = {};
   plan.units.forEach((u, ui) =>
     u.lessons.forEach((l, li) => {
       contents[l.id] = lessonToDraft(course.units[ui].lessons[li]);
@@ -77,14 +77,16 @@ describe("assembleCourse", () => {
 
   it("repairs slips: unplaced questions, unknown concepts, bad answers", () => {
     const planned = plan.units[0].lessons[0];
-    const draft = lessonToDraft(course.units[0].lessons[0]);
-    const messy: LessonContent = {
+    const draft = lessonToDraft(course.units[0].lessons[0]).content;
+    const messy: LessonResult = { widgets: [], content: {
+      flashcards: [],
+      formulas: [],
       blocks: draft.blocks.filter((b) => b.type !== "check"), // no checks placed at all
       questions: [
         { ...draft.questions[0], conceptKey: "made-up-concept" },
         { ref: "bad", type: "multipleChoice", conceptKey: "x", prompt: "?", explanation: "", options: ["a", "b"], answerIndex: 5 },
       ],
-    };
+    } };
     const lesson = buildLesson(planned, messy, plan as CoursePlan);
     expect(lesson.questions).toHaveLength(1); // out-of-range answer dropped
     expect(lesson.questions[0].conceptId).toBe(planned.conceptIds[0]); // unknown concept -> lesson's concept

@@ -63,6 +63,31 @@ const lessonBlockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("math"), latex: z.string(), caption: z.string().nullable() }),
   z.object({ type: z.literal("summary"), points: z.array(markdown) }),
   z.object({ type: z.literal("check"), questionRef: z.string().describe("The `ref` of a question in `questions`") }),
+  z.object({
+    type: z.literal("plot"),
+    title: z.string().nullable(),
+    caption: z.string().nullable(),
+    x: z.object({ label: z.string(), min: z.number(), max: z.number(), scale: z.enum(["linear", "log"]) }),
+    y: z.object({ label: z.string(), min: z.number(), max: z.number(), scale: z.enum(["linear", "log"]) }),
+    params: z.array(
+      z.object({ name: z.string(), label: z.string(), min: z.number(), max: z.number(), step: z.number(), value: z.number() }),
+    ),
+    series: z.array(z.object({ label: z.string(), expr: z.string(), style: z.enum(["line", "stem"]) })),
+  }),
+  z.object({
+    type: z.literal("diagram"),
+    svg: z.string().describe("A complete <svg> element with a viewBox"),
+    alt: z.string().describe("What the diagram shows, for screen readers"),
+    caption: z.string().nullable(),
+  }),
+  z.object({
+    type: z.literal("interactive"),
+    title: z.string(),
+    brief: z
+      .string()
+      .describe("Full spec for the developer who builds it: what it shows, controls, behaviour, what the student should notice"),
+    fallback: markdown.describe("Explanation shown instead if the interactive can't be built"),
+  }),
 ]);
 
 const questionBase = {
@@ -85,8 +110,22 @@ const lessonQuestionSchema = z.discriminatedUnion("type", [
 export const lessonContentSchema = z.object({
   blocks: z.array(lessonBlockSchema),
   questions: z.array(lessonQuestionSchema),
+  flashcards: z.array(z.object({ front: markdown, back: markdown })),
+  formulas: z.array(z.object({ name: z.string(), latex: z.string(), note: z.string() })),
 });
 
 export type LessonContent = z.infer<typeof lessonContentSchema>;
+
+// ---------- Interactive build pass ----------
+
+export const widgetBuildSchema = z.object({
+  html: z.string().describe("Body content: <style>, markup and <script>, no <html>/<head>/<body> tags"),
+  height: z.number().int().describe("Height in CSS pixels the widget needs at 700px wide"),
+});
+
+export type WidgetBuild = z.infer<typeof widgetBuildSchema>;
+
+/** A lesson's generated content plus the interactives built for it (aligned with its "interactive" blocks; null = failed). */
+export type LessonResult = { content: LessonContent; widgets: (WidgetBuild | null)[] };
 export type LessonBlockDraft = z.infer<typeof lessonBlockSchema>;
 export type LessonQuestionDraft = z.infer<typeof lessonQuestionSchema>;
