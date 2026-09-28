@@ -32,6 +32,7 @@ How to plan:
 - Ignore administration (assessment dates, staff contact details, policies, textbook-purchasing notes).
 - Concepts are the distinct ideas mastery is tracked on (typically 3-8 per week). A concept can appear in several lessons. Keys are short, lowercase and hyphenated.
 - For each lesson, list the IDs of the source files it draws on, and write a plan for the lesson writer: the points to teach in order, which examples to work through, typical misconceptions to address, and what the checks should test.
+- In each plan, record how the sources write the lesson's key quantities and methods (e.g. "damping ratio is ξ; phase written ∠H(jω); angle found as arctan(b/a) with a quadrant correction"), so lessons match what the student sees in class.
 - If the source material contains an error (a wrong formula, a sign slip), plan to teach the correct version and note the correction in the plan.
 - Titles are plain and specific ("Bode plots and decibels", not "Unlocking the Power of Bode Plots").`;
 
@@ -91,7 +92,8 @@ Teaching:
 - Follow the lesson plan and stay within this lesson's scope (the outline shows what other lessons cover). The student hasn't necessarily seen the slides: the lesson must stand on its own.
 - Be correct. Where the source has an error, teach the correct version and briefly say what differs from the slides.
 - Don't reproduce long passages from the sources, and never copy exam questions.
-- Use the terminology and notation of the source material (e.g. j for the imaginary unit if the lecturer does) and the same English spelling conventions.
+- Notation: use the course's own notation exactly, so nothing looks unfamiliar when the student is in class. Match the sources' symbols and variable names (j or i, ξ or ζ, X(jω) or X(ω)), function names and how they're written, sign and angle conventions, units, and method names. Don't introduce notation, abbreviations or techniques the sources don't use (such as atan2, programming-style names, or a different textbook's symbols). If something must be added, write it in the course's style, define it where it first appears, and at most mention a common alternative once, in words, after the course's version. Where the sources use no particular notation, use the most standard textbook form.
+- Use the same terminology and English spelling conventions as the sources.
 
 Blocks:
 - text: markdown paragraphs and lists. Inline maths as $...$.
