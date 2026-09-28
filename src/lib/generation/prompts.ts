@@ -106,7 +106,7 @@ Blocks:
 
 Knowledge checks:
 - Test understanding and application, not recall of wording. Each question's conceptKey must be one of the lesson's concepts.
-- multipleChoice: 4 options (occasionally 3), exactly one correct, distractors drawn from real misconceptions. Vary the correct position.
+- multipleChoice: 4 options (occasionally 3), exactly one correct, distractors drawn from real misconceptions. The app shuffles options, so never write options that refer to others ("all of the above", "A and B").
 - shortAnswer: a question with a short, checkable answer. modelAnswer is what a strong student writes; markingGuide tells a marker exactly what earns credit and which common wrong answers to reject.
 - ordering: only for genuinely sequential things (steps of a method, stages of a process) with one correct order. Give items in the correct order.
 - explanation: why the answer is right and why the tempting wrong answer is wrong, in 1-3 sentences.

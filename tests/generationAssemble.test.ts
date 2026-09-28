@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sample from "@/content/sample-course.json";
 import { courseSchema } from "@/lib/course/schema";
-import { assembleCourse, buildLesson, planFromOutline, slugify, type CoursePlan } from "@/lib/generation/assemble";
+import { assembleCourse, buildLesson, planFromOutline, shuffleOptions, slugify, type CoursePlan } from "@/lib/generation/assemble";
 import { lessonToDraft } from "@/lib/generation/examples";
 import type { LessonContent, Outline } from "@/lib/generation/schemas";
 
@@ -92,5 +92,25 @@ describe("assembleCourse", () => {
     expect(checks).toHaveLength(1); // placed automatically
     const lastTwo = lesson.blocks.slice(-2).map((b) => b.type);
     expect(lastTwo).toEqual(["check", "summary"]); // just before the summary
+  });
+});
+
+describe("shuffleOptions", () => {
+  it("moves the answer with its option and is stable per seed", () => {
+    const options = ["right", "w1", "w2", "w3"];
+    const a = shuffleOptions(options, 0, "q-x-1");
+    expect(a.options[a.answerIndex]).toBe("right");
+    expect(shuffleOptions(options, 0, "q-x-1")).toEqual(a);
+    expect([...a.options].sort()).toEqual([...options].sort());
+  });
+
+  it("spreads correct answers across positions", () => {
+    const positions = new Set(Array.from({ length: 40 }, (_, i) => shuffleOptions(["right", "a", "b", "c"], 0, `q-${i}`).answerIndex));
+    expect(positions.size).toBe(4);
+  });
+
+  it("leaves options alone when one refers to the others", () => {
+    const options = ["x", "y", "Both of the above", "Neither"];
+    expect(shuffleOptions(options, 2, "q-1")).toEqual({ options, answerIndex: 2 });
   });
 });

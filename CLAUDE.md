@@ -48,6 +48,9 @@ src/
       load.ts               # server reads via the user's client (RLS applies)
     supabase/               # server.ts (user, cookies), browser.ts, admin.ts (secret key, scripts/jobs only)
     progress.ts             # lesson progress reads
+    upload/                 # browser file inspection, week guessing, draft store, text cleaning
+    generation/             # phase 5: schemas (what Claude fills in), prompts, claude.ts (calls + cost), assemble.ts (IDs + repairs, tested), pipeline.ts
+  inngest/                  # background jobs: extractCourseFiles, generateCourse
     theme.ts
   content/
     sample-course.json      # hand-written sample course (phase 2, from ENGR2722 week 7)
@@ -87,6 +90,8 @@ npm run lint         # ESLint
 npm run typecheck    # tsc --noEmit
 npm test             # Vitest unit tests (schema validation, mastery formula, etc.)
 npm run seed         # load/refresh the sample course in Supabase (safe to re-run; keeps progress)
+npm run generate -- <courseId> [cram|recommended|deep] [--outline-only]   # build a course without Inngest; SPENDS ANTHROPIC CREDIT
+npm run inngest      # local Inngest dev server (currently blocked by Windows Smart App Control on this machine)
 ```
 
 Before calling a phase done: `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` all pass, and the phase's "done when" check is handed to the user to try in the browser.
@@ -98,6 +103,8 @@ Before calling a phase done: `npm run lint`, `npm run typecheck`, `npm test` and
 - Only `NEXT_PUBLIC_*` variables may reach the browser; the Anthropic key and Supabase service-role key are server-only.
 - Schema changes: add a new numbered file in `supabase/migrations/` and ask the user to run it in the SQL Editor. Security: RLS on every table; browsers only use the publishable key.
 - Never print `.env.local` values, even partially masked.
+- Anything that calls Claude costs real money: get the user's OK (with an estimate) before running generation. Generation uses `claude-sonnet-5` (PLAN.md: Sonnet for generation, Haiku for the tutor). Claude never assigns IDs; assemble.ts does.
+- After deploying, re-sync Inngest: `curl -X PUT https://unituteapp.vercel.app/api/inngest` (the Vercel integration isn't syncing automatically yet).
 - Commit at the end of each phase (and at sensible checkpoints within one).
 
 ## Working with the user

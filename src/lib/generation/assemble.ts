@@ -1,4 +1,5 @@
 import { courseSchema, type Block, type Course, type Lesson, type Question } from "@/lib/course/schema";
+import { seededShuffle } from "@/lib/shuffle";
 import type { LessonContent, LessonQuestionDraft, Outline } from "./schemas";
 
 /*
@@ -222,7 +223,7 @@ function toQuestion(draft: LessonQuestionDraft, id: string, conceptId: string): 
       const options = draft.options.filter(nonEmpty).slice(0, 6);
       if (options.length < 2 || draft.answerIndex < 0 || draft.answerIndex >= options.length) return null;
       if (options.length !== draft.options.length) return null; // an option was blank: the index may be off
-      return { ...base, type: "multipleChoice", options, answerIndex: draft.answerIndex };
+      return { ...base, type: "multipleChoice", ...shuffleOptions(options, draft.answerIndex, id) };
     }
     case "shortAnswer":
       if (!nonEmpty(draft.modelAnswer)) return null;
@@ -238,6 +239,22 @@ function toQuestion(draft: LessonQuestionDraft, id: string, conceptId: string): 
       return { ...base, type: "ordering", items };
     }
   }
+}
+
+// Options that point at other options only make sense in their original order.
+const POSITIONAL_OPTION = /\b(all|none|both|neither) of the (above|others)\b|\b(options?|answers?) [a-d]\b|^\(?[a-d]\)? and \(?[a-d]\)?$/i;
+
+/**
+ * Models tend to put the right answer first. Shuffling here (seeded by the question ID, so
+ * it's stable) spreads correct answers evenly, whatever the model does.
+ */
+export function shuffleOptions(options: string[], answerIndex: number, seed: string): { options: string[]; answerIndex: number } {
+  if (options.some((o) => POSITIONAL_OPTION.test(o.trim()))) return { options, answerIndex };
+  const order = seededShuffle(
+    options.map((_, i) => i),
+    seed,
+  );
+  return { options: order.map((i) => options[i]), answerIndex: order.indexOf(answerIndex) };
 }
 
 /** Puts the whole course together and validates it; throws with details if anything is off. */
