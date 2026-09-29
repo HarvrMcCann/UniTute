@@ -48,7 +48,18 @@ type StructuredCall<T extends z.ZodType> = {
   schema: T;
   maxTokens: number;
   effort: "low" | "medium" | "high";
+  /** Custom validation (e.g. item-by-item, dropping bad items). Defaults to schema.safeParse. */
+  parse?: (json: unknown) => z.infer<T> | null;
 };
+
+/**
+ * The JSON schema Claude must follow, WITHOUT the SDK's built-in parser attached: that parser
+ * throws on the first invalid item and loses the whole response. We validate ourselves.
+ */
+function outputFormat(schema: z.ZodType) {
+  const { type, schema: jsonSchema } = zodOutputFormat(schema);
+  return { type, schema: jsonSchema };
+}
 
 /**
  * One streamed request with structured JSON output, validated against `schema`.
@@ -63,7 +74,7 @@ export async function callStructured<T extends z.ZodType>(
     model: GENERATION_MODEL,
     max_tokens: call.maxTokens,
     thinking: { type: "adaptive" },
-    output_config: { effort: call.effort, format: zodOutputFormat(call.schema) },
+    output_config: { effort: call.effort, format: outputFormat(call.schema) },
     system: [{ type: "text", text: call.system, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: call.content }],
   });
@@ -97,6 +108,11 @@ export async function callStructured<T extends z.ZodType>(
     json = JSON.parse(text);
   } catch {
     throw new GenerationError("Claude's response wasn't valid JSON", true);
+  }
+  if (call.parse) {
+    const data = call.parse(json);
+    if (data === null) throw new GenerationError("Claude's response didn't match the format", true);
+    return { data, usage, durationMs: Date.now() - started };
   }
   const parsed = call.schema.safeParse(json);
   if (!parsed.success) throw new GenerationError(`Claude's response didn't match the format: ${parsed.error.message.slice(0, 300)}`, true);

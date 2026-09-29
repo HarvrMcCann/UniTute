@@ -190,3 +190,30 @@ export function toWire(c: LessonContent): LessonWire {
     formulas: c.formulas,
   };
 }
+
+const flashcardItem = z.object({ front: z.string(), back: z.string() });
+const formulaItem = z.object({ name: z.string(), latex: z.string(), note: z.string() });
+
+/**
+ * Validates a lesson item by item: a block, question, card or formula that doesn't fit the
+ * format is dropped (and counted) instead of failing the whole lesson. Null if nothing usable.
+ */
+export function parseLessonWire(json: unknown): { lesson: LessonWire; dropped: number } | null {
+  if (!json || typeof json !== "object") return null;
+  const raw = json as Record<string, unknown>;
+  let dropped = 0;
+  const keep = <T>(items: unknown, schema: z.ZodType<T>): T[] =>
+    (Array.isArray(items) ? items : []).flatMap((item) => {
+      const r = schema.safeParse(item);
+      if (!r.success) dropped++;
+      return r.success ? [r.data] : [];
+    });
+
+  const lesson: LessonWire = {
+    blocks: keep(raw.blocks, wireBlock),
+    questions: keep(raw.questions, wireQuestion),
+    flashcards: keep(raw.flashcards, flashcardItem),
+    formulas: keep(raw.formulas, formulaItem),
+  };
+  return lesson.blocks.length > 0 ? { lesson, dropped } : null;
+}

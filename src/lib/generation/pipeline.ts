@@ -5,7 +5,7 @@ import { assembleCourse, planFromOutline, type CoursePlan, type LengthMode, type
 import { callStructured, GENERATION_MODEL, type Usage } from "./claude";
 import { courseOutlineText, LESSON_SYSTEM, lessonRequest, OUTLINE_SYSTEM, outlinePrompt, WIDGET_SYSTEM, widgetRequest } from "./prompts";
 import { outlineSchema, widgetBuildSchema, type LessonContent, type LessonResult, type WidgetBuild } from "./schemas";
-import { fromWire, lessonWireSchema } from "./wire";
+import { fromWire, lessonWireSchema, parseLessonWire } from "./wire";
 
 /*
  * The steps of course generation as plain async functions (admin client in, data out),
@@ -181,6 +181,11 @@ export async function generateLessonContent(
     schema: lessonWireSchema,
     maxTokens: 32_000,
     effort: "medium",
+    parse: (json) => {
+      const result = parseLessonWire(json);
+      if (result?.dropped) console.warn(`lesson ${lesson.id}: dropped ${result.dropped} malformed item(s)`);
+      return result?.lesson ?? null;
+    },
   });
   await logUsage(admin, inputs.courseId, `lesson ${lesson.id}`, usage, durationMs);
   return fromWire(data);
