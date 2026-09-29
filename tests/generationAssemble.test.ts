@@ -3,6 +3,7 @@ import sample from "@/content/sample-course.json";
 import { courseSchema } from "@/lib/course/schema";
 import { assembleCourse, buildLesson, planFromOutline, shuffleOptions, slugify, type CoursePlan } from "@/lib/generation/assemble";
 import { lessonToDraft } from "@/lib/generation/examples";
+import { lessonBudget } from "@/lib/generation/prompts";
 import type { LessonResult, Outline } from "@/lib/generation/schemas";
 
 const course = courseSchema.parse(sample);
@@ -114,5 +115,20 @@ describe("shuffleOptions", () => {
   it("leaves options alone when one refers to the others", () => {
     const options = ["x", "y", "Both of the above", "Neither"];
     expect(shuffleOptions(options, 2, "q-1")).toEqual({ options, answerIndex: 2 });
+  });
+});
+
+describe("lessonBudget", () => {
+  const week = (w: number | null, box: "content" | "objectives" = "content") => ({ week: w, box });
+
+  it("scales with the teaching weeks and the length choice", () => {
+    expect(lessonBudget([week(7), week(7), week(7, "objectives")], "recommended")).toEqual({ weeks: 1, min: 2, max: 3 });
+    expect(lessonBudget([week(7)], "cram")).toEqual({ weeks: 1, min: 1, max: 2 });
+    expect(lessonBudget([week(3), week(4), week(5), week(6), week(7)], "recommended")).toEqual({ weeks: 5, min: 10, max: 15 });
+    expect(lessonBudget([week(3), week(4)], "deep")).toEqual({ weeks: 2, min: 6, max: 10 });
+  });
+
+  it("treats files with no week as one teaching week", () => {
+    expect(lessonBudget([week(null)], "recommended")).toEqual({ weeks: 1, min: 2, max: 3 });
   });
 });

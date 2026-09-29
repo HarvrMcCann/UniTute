@@ -28,7 +28,8 @@ You will receive a student's source files, grouped by teaching week, as extracte
 How to plan:
 - Usually one unit per teaching week that has content. Merge very thin weeks with a neighbour; split a week only if it clearly covers two separate topics. Files with no week are either whole-unit references (textbooks) or unassigned material: fold their relevant parts into the weeks where they fit.
 - Order units and lessons in the order the material is taught. Each lesson should be one coherent idea a student could finish in one sitting.
-- Learning objectives, unit outlines and past exams tell you what matters. Give examined and emphasised topics more lessons and depth. Never copy exam questions; they only set emphasis.
+- Objectives files (learning objectives, unit outlines, past exams, tutorial or practice questions) define what the student actually needs. When they're provided, the course is built around them: every lesson serves one or more of the skills or topics they ask for, depth follows how heavily they're examined or practised, and lecture material they never touch gets at most a brief mention inside a related lesson (never its own lesson). Each lesson's plan names the objective(s) it serves and says what the student must be able to do by the end, so the checks can test exactly that. Never copy exam or tutorial questions; write new ones that test the same skills.
+- Stay within the lesson budget you're given. Prefer fewer, well-focused lessons: merge closely related topics rather than splitting them.
 - Tutorial questions and solutions are practice material: point lessons at them for worked examples and checks.
 - Ignore administration (assessment dates, staff contact details, policies, textbook-purchasing notes).
 - Concepts are the distinct ideas mastery is tracked on (typically 3-8 per week). A concept can appear in several lessons. Keys are short, lowercase and hyphenated.
@@ -47,6 +48,20 @@ export type OutlineSource = {
 
 const OUTLINE_FILE_CHAR_LIMIT = 80_000;
 
+const LESSONS_PER_WEEK: Record<LengthMode, [number, number]> = {
+  cram: [1, 1.5],
+  recommended: [2, 3],
+  deep: [3, 5],
+};
+
+/** How many lessons the whole course should have: set by the number of teaching weeks and the length choice. */
+export function lessonBudget(sources: Pick<OutlineSource, "box" | "week">[], mode: LengthMode): { weeks: number; min: number; max: number } {
+  const weeks = Math.max(1, new Set(sources.filter((s) => s.box === "content" && s.week !== null).map((s) => s.week)).size);
+  const [lo, hi] = LESSONS_PER_WEEK[mode];
+  const min = Math.max(1, Math.round(weeks * lo));
+  return { weeks, min, max: Math.max(min, Math.ceil(weeks * hi)) };
+}
+
 export function outlinePrompt(input: {
   courseTitle: string;
   notes: string;
@@ -64,11 +79,15 @@ export function outlinePrompt(input: {
   const byWeek = [...input.sources.filter((s) => s.box === "content")].sort((a, b) => (a.week ?? 999) - (b.week ?? 999));
   const objectives = input.sources.filter((s) => s.box === "objectives");
 
+  const budget = lessonBudget(input.sources, input.lengthMode);
+
   return `Course name given by the student: ${input.courseTitle}
 
 Length the student chose:
 ${LENGTH_GUIDE[input.lengthMode]}
 
+Lesson budget: the files cover ${budget.weeks} teaching week${budget.weeks === 1 ? "" : "s"}, so plan ${budget.min === budget.max ? `exactly ${budget.min}` : `between ${budget.min} and ${budget.max}`} lessons in total. This is a firm limit: combine related topics into one lesson rather than exceeding it.
+${objectives.length ? "Objectives files are provided: they define the scope. Build lessons around what they ask the student to know and do; lecture material they don't touch gets at most a brief mention inside a related lesson.\n" : ""}
 ${input.notes.trim() ? `The student's notes (their preferences; follow them where sensible):\n<notes>\n${input.notes.trim()}\n</notes>\n\n` : ""}<content_files>
 ${byWeek.map(describe).join("\n\n")}
 </content_files>
