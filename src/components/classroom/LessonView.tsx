@@ -65,7 +65,12 @@ export function LessonView({ course, location, lessonDbId, questionIds, resumeBl
                 <span className="text-sm text-muted">{RELEVANCE_HINT[lesson.relevance]}</span>
               </div>
               {lesson.objectives.length > 0 && (
-                <ul className="mt-2 space-y-1 text-sm" aria-label="Objectives this lesson covers">
+                <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-faint">
+                  {lesson.relevance === "core" ? "Your objectives covered here" : "What you'll be able to do"}
+                </p>
+              )}
+              {lesson.objectives.length > 0 && (
+                <ul className="mt-1.5 space-y-1 text-sm" aria-label={lesson.relevance === "core" ? "Your objectives covered here" : "What you'll be able to do"}>
                   {lesson.objectives.map((o) => (
                     <li key={o} className="flex gap-2">
                       <span aria-hidden className="text-accent">

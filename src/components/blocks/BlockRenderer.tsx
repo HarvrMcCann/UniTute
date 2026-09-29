@@ -35,7 +35,7 @@ function BlockContent({ block, questions, questionIds }: BlockRendererProps) {
     case "heading":
       return (
         <h2 className="pt-6 font-display text-2xl font-medium tracking-tight sm:text-[1.7rem]">
-          {block.text}
+          <Markdown inline>{block.text}</Markdown>
           {block.relevance && <RelevanceBadge relevance={block.relevance} className="ml-3 -translate-y-0.5" />}
         </h2>
       );
