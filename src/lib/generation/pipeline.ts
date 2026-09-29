@@ -4,7 +4,8 @@ import { saveCourse } from "@/lib/course/save";
 import { assembleCourse, planFromOutline, type CoursePlan, type LengthMode, type PlannedUnit } from "./assemble";
 import { callStructured, GENERATION_MODEL, type Usage } from "./claude";
 import { courseOutlineText, LESSON_SYSTEM, lessonRequest, OUTLINE_SYSTEM, outlinePrompt, WIDGET_SYSTEM, widgetRequest } from "./prompts";
-import { lessonContentSchema, outlineSchema, widgetBuildSchema, type LessonContent, type LessonResult, type WidgetBuild } from "./schemas";
+import { outlineSchema, widgetBuildSchema, type LessonContent, type LessonResult, type WidgetBuild } from "./schemas";
+import { fromWire, lessonWireSchema } from "./wire";
 
 /*
  * The steps of course generation as plain async functions (admin client in, data out),
@@ -177,12 +178,12 @@ export async function generateLessonContent(
   const { data, usage, durationMs } = await callStructured({
     system: LESSON_SYSTEM,
     content,
-    schema: lessonContentSchema,
+    schema: lessonWireSchema,
     maxTokens: 32_000,
     effort: "medium",
   });
   await logUsage(admin, inputs.courseId, `lesson ${lesson.id}`, usage, durationMs);
-  return data;
+  return fromWire(data);
 }
 
 // ---------- Interactives ----------

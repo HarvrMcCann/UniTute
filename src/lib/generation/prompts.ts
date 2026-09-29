@@ -2,6 +2,7 @@ import sample from "@/content/sample-course.json";
 import { courseSchema } from "@/lib/course/schema";
 import type { CoursePlan, LengthMode, PlannedLesson } from "./assemble";
 import { lessonToDraft } from "./examples";
+import { toWire } from "./wire";
 
 /*
  * Prompts for the two generation passes. Everything in the system prompts is identical
@@ -80,7 +81,7 @@ Plan the course.`;
 const exampleLesson = (() => {
   const course = courseSchema.parse(sample);
   const lesson = course.units[0].lessons[2]; // "Frequency response of LTI systems": every block type we care about
-  return JSON.stringify(lessonToDraft(lesson).content, null, 1);
+  return JSON.stringify(toWire(lessonToDraft(lesson).content), null, 1);
 })();
 
 export const LESSON_SYSTEM = `You write lessons for UniTute, an app that turns a unit's lecture slides and readings into an interactive course. A student reads your lesson on a phone or laptop, answers knowledge checks along the way, and can ask an AI tutor about any part of it.
@@ -126,6 +127,10 @@ Formatting inside strings:
 - Markdown and LaTeX go inside JSON strings, so every LaTeX backslash is written once in the maths itself (\\frac, \\omega); the JSON encoding handles escaping.
 - In markdown tables write |x| as \\lvert x \\rvert so the table isn't broken.
 - Write negative angles as \\angle{-20^\\circ} so the minus isn't spaced as subtraction.
+
+Output format: every block is one object with a "type" and these fields (all others null):
+text: text · heading: text · callout: variant, title (optional), text · definition: term, text · workedExample: problem, steps, answer · code: code, language, caption · math: code (the LaTeX), caption · summary: steps (the points) · check: questionRef · plot: title, caption, plot · diagram: code (the <svg>), language (alt text), caption · interactive: title, brief, text (the fallback explanation).
+Questions: multipleChoice uses options and answerIndex; ordering uses options (in the correct order); shortAnswer uses modelAnswer and markingGuide.
 
 Here is an example of a finished lesson in exactly the format to produce (from a different course; match its quality, tone and structure, not its content):
 <example_lesson>
