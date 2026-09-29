@@ -25,7 +25,9 @@ const BLOCK_TYPES = [
 ] as const;
 
 const str = z.string().nullable();
-const axis = z.object({ label: z.string(), min: z.number(), max: z.number(), scale: z.enum(["linear", "log"]) });
+// Small option lists are plain strings here (enums inflate the compiled grammar, which has a size
+// limit); pick() maps them onto the allowed values in fromWire.
+const axis = z.object({ label: z.string(), min: z.number(), max: z.number(), scale: z.string().describe('"linear" or "log"') });
 
 const wireBlock = z.object({
   type: z.enum(BLOCK_TYPES),
@@ -33,7 +35,7 @@ const wireBlock = z.object({
     "text: markdown. heading: the heading. callout/definition: markdown body. interactive: fallback explanation shown if it can't be built.",
   ),
   title: str.describe("callout, plot or interactive title"),
-  variant: z.enum(["keyIdea", "tip", "warning", "example"]).nullable().describe("callout only"),
+  variant: str.describe('callout only: "keyIdea", "tip", "warning" or "example"'),
   term: str.describe("definition only"),
   problem: str.describe("workedExample only"),
   steps: z.array(z.string()).nullable().describe("workedExample steps, or summary points"),
@@ -47,12 +49,12 @@ const wireBlock = z.object({
       x: axis,
       y: axis,
       params: z.array(z.object({ name: z.string(), label: z.string(), min: z.number(), max: z.number(), step: z.number(), value: z.number() })),
-      series: z.array(z.object({ label: z.string(), expr: z.string(), style: z.enum(["line", "stem"]) })),
+      series: z.array(z.object({ label: z.string(), expr: z.string(), style: z.string().describe('"line" or "stem"') })),
     })
     .nullable()
     .describe("plot only"),
   brief: str.describe("interactive only: the full build spec"),
-  relevance: z.enum(["core", "supporting", "extension"]).nullable().describe("heading only: the section's relevance to the objectives"),
+  relevance: str.describe('heading only: "core", "supporting" or "extension" (null if the lesson has no relevance)'),
 });
 
 const wireQuestion = z.object({
@@ -94,15 +96,28 @@ const EMPTY: Omit<WireBlock, "type"> = {
   relevance: null,
 };
 
+/** Maps a free-text option onto an allowed value (case-insensitive), or the fallback. */
+function pick<T extends string>(value: string | null | undefined, allowed: readonly T[], fallback: T): T;
+function pick<T extends string>(value: string | null | undefined, allowed: readonly T[], fallback: null): T | null;
+function pick<T extends string>(value: string | null | undefined, allowed: readonly T[], fallback: T | null): T | null {
+  const v = (value ?? "").trim().toLowerCase();
+  return allowed.find((a) => a.toLowerCase() === v) ?? fallback;
+}
+
+const VARIANTS = ["keyIdea", "tip", "warning", "example"] as const;
+const RELEVANCE = ["core", "supporting", "extension"] as const;
+const SCALES = ["linear", "log"] as const;
+const STYLES = ["line", "stem"] as const;
+
 function blockFromWire(b: WireBlock): LessonBlockDraft | null {
   const has = (s: string | null): s is string => typeof s === "string" && s.trim().length > 0;
   switch (b.type) {
     case "text":
       return has(b.text) ? { type: "text", markdown: b.text } : null;
     case "heading":
-      return has(b.text) ? { type: "heading", text: b.text, relevance: b.relevance } : null;
+      return has(b.text) ? { type: "heading", text: b.text, relevance: pick(b.relevance, RELEVANCE, null) } : null;
     case "callout":
-      return has(b.text) ? { type: "callout", variant: b.variant ?? "tip", title: b.title, markdown: b.text } : null;
+      return has(b.text) ? { type: "callout", variant: pick(b.variant, VARIANTS, "tip"), title: b.title, markdown: b.text } : null;
     case "definition":
       return has(b.term) && has(b.text) ? { type: "definition", term: b.term, markdown: b.text } : null;
     case "workedExample":
@@ -116,7 +131,17 @@ function blockFromWire(b: WireBlock): LessonBlockDraft | null {
     case "check":
       return has(b.questionRef) ? { type: "check", questionRef: b.questionRef } : null;
     case "plot":
-      return b.plot ? { type: "plot", title: b.title, caption: b.caption, ...b.plot } : null;
+      return b.plot
+        ? {
+            type: "plot",
+            title: b.title,
+            caption: b.caption,
+            x: { ...b.plot.x, scale: pick(b.plot.x.scale, SCALES, "linear") },
+            y: { ...b.plot.y, scale: pick(b.plot.y.scale, SCALES, "linear") },
+            params: b.plot.params,
+            series: b.plot.series.map((s) => ({ ...s, style: pick(s.style, STYLES, "line") })),
+          }
+        : null;
     case "diagram":
       return has(b.code) ? { type: "diagram", svg: b.code, alt: b.language ?? b.caption ?? "Diagram", caption: b.caption } : null;
     case "interactive":
