@@ -48,6 +48,8 @@ type StructuredCall<T extends z.ZodType> = {
   schema: T;
   maxTokens: number;
   effort: "low" | "medium" | "high";
+  /** Called as soon as the response arrives, before validation, so failed calls are still counted. */
+  onUsage?: (usage: Usage, durationMs: number) => Promise<void>;
   /** Custom validation (e.g. item-by-item, dropping bad items). Defaults to schema.safeParse. */
   parse?: (json: unknown) => z.infer<T> | null;
 };
@@ -94,6 +96,7 @@ export async function callStructured<T extends z.ZodType>(
     cache_creation_input_tokens: message.usage.cache_creation_input_tokens ?? 0,
     cache_read_input_tokens: message.usage.cache_read_input_tokens ?? 0,
   };
+  await call.onUsage?.(usage, Date.now() - started);
 
   if (message.stop_reason === "refusal") {
     throw new GenerationError(`Claude declined this part (${message.stop_details?.category ?? "no category"})`, false);

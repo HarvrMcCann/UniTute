@@ -98,14 +98,14 @@ export async function generateOutline(admin: SupabaseClient, inputs: CourseInput
     sources: inputs.files.map((f) => ({ id: f.id, filename: f.filename, box: f.box, week: f.week, text: texts.get(f.id) ?? "" })),
   });
 
-  const { data, usage, durationMs } = await callStructured({
+  const { data } = await callStructured({
     system: OUTLINE_SYSTEM,
     content: [{ type: "text", text: prompt }],
     schema: outlineSchema,
     maxTokens: 32_000,
     effort: "high",
+    onUsage: (usage, ms) => logUsage(admin, inputs.courseId, "outline", usage, ms),
   });
-  await logUsage(admin, inputs.courseId, "outline", usage, durationMs);
 
   return planFromOutline(data, {
     courseId: inputs.courseId,
@@ -175,19 +175,19 @@ export async function generateLessonContent(
     { type: "text", text: lessonRequest(plan, lesson) },
   ];
 
-  const { data, usage, durationMs } = await callStructured({
+  const { data } = await callStructured({
     system: LESSON_SYSTEM,
     content,
     schema: lessonWireSchema,
     maxTokens: 32_000,
     effort: "medium",
+    onUsage: (usage, ms) => logUsage(admin, inputs.courseId, `lesson ${lesson.id}`, usage, ms),
     parse: (json) => {
       const result = parseLessonWire(json);
       if (result?.dropped) console.warn(`lesson ${lesson.id}: dropped ${result.dropped} malformed item(s)`);
       return result?.lesson ?? null;
     },
   });
-  await logUsage(admin, inputs.courseId, `lesson ${lesson.id}`, usage, durationMs);
   return fromWire(data);
 }
 
@@ -212,7 +212,7 @@ export async function buildWidget(
 ): Promise<WidgetBuild | null> {
   const lesson = plan.units.flatMap((u) => u.lessons).find((l) => l.id === lessonId)!;
   try {
-    const { data, usage, durationMs } = await callStructured({
+    const { data } = await callStructured({
       system: WIDGET_SYSTEM,
       content: [
         {
@@ -223,8 +223,8 @@ export async function buildWidget(
       schema: widgetBuildSchema,
       maxTokens: 24_000,
       effort: "high",
+      onUsage: (usage, ms) => logUsage(admin, inputs.courseId, `widget ${lessonId} #${index + 1}`, usage, ms),
     });
-    await logUsage(admin, inputs.courseId, `widget ${lessonId} #${index + 1}`, usage, durationMs);
     return data.html.trim() ? data : null;
   } catch (error) {
     console.warn(`widget ${lessonId} #${index + 1} failed: ${error instanceof Error ? error.message : error}`);
