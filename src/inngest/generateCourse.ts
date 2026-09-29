@@ -46,7 +46,9 @@ export const generateCourse = inngest.createFunction(
       });
     },
   },
-  async ({ event, step }) => {
+  async ({ event, step, attempt }) => {
+    // attempt counts retries of the step being run: retries use low effort, which is much faster.
+    const effort = attempt > 0 ? "low" : "medium";
     const { courseId } = event.data as { courseId: string };
 
     const plan = await step.run("outline", () =>
@@ -70,7 +72,7 @@ export const generateCourse = inngest.createFunction(
               guard(async () => {
                 const admin = createAdminClient();
                 const inputs = await loadCourseInputs(admin, courseId);
-                return generateLessonContent(admin, inputs, plan, unit.id, lesson.id);
+                return generateLessonContent(admin, inputs, plan, unit.id, lesson.id, effort);
               }),
             )) as LessonContent;
             // Each interactive is its own step (built in parallel); a failed one becomes null.
@@ -80,7 +82,7 @@ export const generateCourse = inngest.createFunction(
                   step.run(`widget ${lesson.id} ${i + 1}`, async () => {
                     const admin = createAdminClient();
                     const inputs = await loadCourseInputs(admin, courseId);
-                    return buildWidget(admin, inputs, plan, lesson.id, i, request);
+                    return buildWidget(admin, inputs, plan, lesson.id, i, request, { effort, finalAttempt: attempt > 0 });
                   }) as Promise<WidgetBuild | null>,
               ),
             );

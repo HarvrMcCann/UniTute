@@ -209,6 +209,7 @@ Quality bar:
 - Smooth but light: requestAnimationFrame for animation, no busy loops, cap work per frame. Physically and mathematically correct.
 - Clean, calm visual design consistent with a modern learning app: generous spacing, rounded corners, clear hierarchy.
 - Robust: guard against invalid input and extreme values; never throw.
+- Compact: aim for under 12 KB of code, no comments or dead code. A focused tool that does one thing brilliantly beats a sprawling one, and it must be written quickly.
 
 Return the body HTML, and the height in CSS pixels the widget needs at 700px wide.`;
 

@@ -161,6 +161,8 @@ export async function generateLessonContent(
   plan: CoursePlan,
   unitId: string,
   lessonId: string,
+  /** Retries run at "low" so a slow first attempt still finishes within the platform's time limit. */
+  effort: "low" | "medium" = "medium",
 ): Promise<LessonContent> {
   const unit = plan.units.find((u) => u.id === unitId)!;
   const lesson = unit.lessons.find((l) => l.id === lessonId)!;
@@ -180,7 +182,7 @@ export async function generateLessonContent(
     content,
     schema: lessonWireSchema,
     maxTokens: 32_000,
-    effort: "medium",
+    effort,
     onUsage: (usage, ms) => logUsage(admin, inputs.courseId, `lesson ${lesson.id}`, usage, ms),
     parse: (json) => {
       const result = parseLessonWire(json);
@@ -199,8 +201,9 @@ export function interactiveRequests(content: LessonContent) {
 }
 
 /**
- * Builds one interactive from its brief. Never throws: a failed build returns null and the
- * lesson shows the brief's fallback explanation instead.
+ * Builds one interactive from its brief. On the final attempt it never throws: a failed build
+ * returns null and the lesson shows the brief's fallback explanation instead. Earlier attempts
+ * throw, so the job retries (at lower effort, which is faster).
  */
 export async function buildWidget(
   admin: SupabaseClient,
@@ -209,6 +212,7 @@ export async function buildWidget(
   lessonId: string,
   index: number,
   request: { title: string; brief: string },
+  opts: { effort: "low" | "medium"; finalAttempt: boolean } = { effort: "medium", finalAttempt: true },
 ): Promise<WidgetBuild | null> {
   const lesson = plan.units.flatMap((u) => u.lessons).find((l) => l.id === lessonId)!;
   try {
@@ -221,13 +225,14 @@ export async function buildWidget(
         },
       ],
       schema: widgetBuildSchema,
-      maxTokens: 24_000,
-      effort: "high",
+      maxTokens: 32_000,
+      effort: opts.effort,
       onUsage: (usage, ms) => logUsage(admin, inputs.courseId, `widget ${lessonId} #${index + 1}`, usage, ms),
     });
     return data.html.trim() ? data : null;
   } catch (error) {
     console.warn(`widget ${lessonId} #${index + 1} failed: ${error instanceof Error ? error.message : error}`);
+    if (!opts.finalAttempt) throw error;
     return null;
   }
 }
