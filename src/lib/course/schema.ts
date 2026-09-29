@@ -49,6 +49,9 @@ export const plotSeriesSchema = z.object({
   style: z.enum(["line", "stem"]),
 });
 
+/** How a lesson or section relates to the course's objectives (null when none were given). */
+export const relevanceSchema = z.enum(["core", "supporting", "extension"]);
+
 const blockBase = {
   id: id("b"),
   conceptIds: z.array(z.string()).optional(),
@@ -56,7 +59,7 @@ const blockBase = {
 
 export const blockSchema = z.discriminatedUnion("type", [
   z.object({ ...blockBase, type: z.literal("text"), markdown }),
-  z.object({ ...blockBase, type: z.literal("heading"), text: z.string().min(1) }),
+  z.object({ ...blockBase, type: z.literal("heading"), text: z.string().min(1), relevance: relevanceSchema.optional() }),
   z.object({
     ...blockBase,
     type: z.literal("callout"),
@@ -153,6 +156,9 @@ export const lessonSchema = z.object({
   questions: z.array(questionSchema),
   flashcards: z.array(flashcardSchema).default([]),
   formulas: z.array(formulaSchema).default([]),
+  relevance: relevanceSchema.nullable().default(null),
+  /** The objectives this lesson serves, in the student's terms. */
+  objectives: z.array(z.string()).default([]),
 });
 
 export const unitSchema = z.object({
@@ -274,6 +280,7 @@ export function plotProblems(plot: Pick<PlotBlock, "x" | "y" | "params" | "serie
 export type Course = z.infer<typeof courseSchema>;
 export type PlotBlock = z.infer<typeof blockSchema> & { type: "plot" };
 export type Flashcard = z.infer<typeof flashcardSchema>;
+export type Relevance = z.infer<typeof relevanceSchema>;
 export type Formula = z.infer<typeof formulaSchema>;
 export type Concept = z.infer<typeof conceptSchema>;
 export type Unit = z.infer<typeof unitSchema>;

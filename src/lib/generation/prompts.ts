@@ -28,7 +28,11 @@ You will receive a student's source files, grouped by teaching week, as extracte
 How to plan:
 - Usually one unit per teaching week that has content. Merge very thin weeks with a neighbour; split a week only if it clearly covers two separate topics. Files with no week are either whole-unit references (textbooks) or unassigned material: fold their relevant parts into the weeks where they fit.
 - Order units and lessons in the order the material is taught. Each lesson should be one coherent idea a student could finish in one sitting.
-- Objectives files (learning objectives, unit outlines, past exams, tutorial or practice questions) define what the student actually needs. When they're provided, the course is built around them: every lesson serves one or more of the skills or topics they ask for, depth follows how heavily they're examined or practised, and lecture material they never touch gets at most a brief mention inside a related lesson (never its own lesson). Each lesson's plan names the objective(s) it serves and says what the student must be able to do by the end, so the checks can test exactly that. Never copy exam or tutorial questions; write new ones that test the same skills.
+- The lectures and readings decide what the course covers. Objectives files decide what matters most, and there are two kinds:
+  - Scope-setting: learning objectives or outcomes, unit outlines, past or sample exams. They say what the student must know and do. Give those topics the most lessons, depth and checks.
+  - Practice: weekly tutorial, workshop or problem sheets. They show which skills get practised: use them for emphasis, worked examples and checks, but don't let them narrow the course.
+- Label every lesson's relevance to the scope-setting objectives: "core" (directly taught or tested by them), "supporting" (background needed for core material, not asked for itself) or "extension" (in the lectures but not in the objectives). With only practice sheets, what they practise counts as core. With no objectives files at all, use null. Also list the objectives each lesson serves, as short phrases in the student's terms ("find the DTFS coefficients of a periodic signal").
+- Each lesson's plan says what the student must be able to do by the end, so the checks can test exactly that. For a lesson that mixes relevance levels, say in the plan which parts are core and which are supporting or extension. Never copy exam or tutorial questions; write new ones that test the same skills.
 - Stay within the lesson budget you're given. Prefer fewer, well-focused lessons: merge closely related topics rather than splitting them.
 - Tutorial questions and solutions are practice material: point lessons at them for worked examples and checks.
 - Ignore administration (assessment dates, staff contact details, policies, textbook-purchasing notes).
@@ -87,7 +91,7 @@ Length the student chose:
 ${LENGTH_GUIDE[input.lengthMode]}
 
 Lesson budget: the files cover ${budget.weeks} teaching week${budget.weeks === 1 ? "" : "s"}, so plan ${budget.min === budget.max ? `exactly ${budget.min}` : `between ${budget.min} and ${budget.max}`} lessons in total. This is a firm limit: combine related topics into one lesson rather than exceeding it.
-${objectives.length ? "Objectives files are provided: they define the scope. Build lessons around what they ask the student to know and do; lecture material they don't touch gets at most a brief mention inside a related lesson.\n" : ""}
+${objectives.length ? "Objectives files are provided: work out which are scope-setting and which are practice sheets, give core material the most depth, and label each lesson's relevance.\n" : "No objectives files were provided, so set every lesson's relevance to null and its objectives to an empty list.\n"}
 ${input.notes.trim() ? `The student's notes (their preferences; follow them where sensible):\n<notes>\n${input.notes.trim()}\n</notes>\n\n` : ""}<content_files>
 ${byWeek.map(describe).join("\n\n")}
 </content_files>
@@ -117,7 +121,7 @@ Teaching:
 
 Blocks:
 - text: markdown paragraphs and lists. Inline maths as $...$.
-- heading: splits a lesson into 2-4 sections.
+- heading: splits a lesson into 2-4 sections. When the lesson has a relevance label, give each section heading its own relevance (core, supporting or extension) so students can see which parts their objectives ask for; otherwise null.
 - definition: a key term, defined precisely.
 - callout: keyIdea (the one thing to remember; at most 2 per lesson), tip, warning (common mistake), example (a concrete illustration). Optional short title.
 - workedExample: a problem, 2-5 steps revealed one at a time, and the answer. Each step should be something the student can try before revealing.
@@ -176,6 +180,9 @@ Unit: ${unit.title}
 Lesson: ${lesson.title}
 Summary: ${lesson.summary}
 Target length: about ${lesson.estMinutes} minutes of reading and checks.
+Relevance to the course's objectives: ${lesson.relevance ?? "none given (leave section relevance null)"}${lesson.objectives.length ? `
+Objectives this lesson serves:
+${lesson.objectives.map((o) => `- ${o}`).join("\n")}` : ""}
 Length setting: ${LENGTH_GUIDE[plan.lengthMode]}
 
 Concepts this lesson teaches (use these keys for questions):

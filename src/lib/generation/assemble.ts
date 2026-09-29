@@ -19,6 +19,8 @@ export type PlannedLesson = {
   conceptIds: string[];
   sourceFileIds: string[];
   plan: string;
+  relevance: Lesson["relevance"];
+  objectives: string[];
 };
 
 export type PlannedUnit = { id: string; title: string; summary: string; week: number | null; lessons: PlannedLesson[] };
@@ -92,6 +94,8 @@ export function planFromOutline(
           ],
           sourceFileIds: l.sourceFileIds.filter((id) => opts.knownFileIds.has(id)),
           plan: l.plan.trim(),
+          relevance: l.relevance,
+          objectives: l.objectives.map((o) => o.trim()).filter(Boolean).slice(0, 6),
         })),
     }))
     .filter((u) => u.lessons.length > 0);
@@ -144,7 +148,14 @@ export function buildLesson(planned: PlannedLesson, result: LessonResult, plan: 
         if (nonEmpty(draft.markdown)) blocks.push({ id, type: "text", markdown: draft.markdown });
         break;
       case "heading":
-        if (nonEmpty(draft.text)) blocks.push({ id, type: "heading", text: draft.text.trim() });
+        if (nonEmpty(draft.text))
+          blocks.push({
+            id,
+            type: "heading",
+            text: draft.text.trim(),
+            // Section labels only make sense when the course has objectives.
+            ...(planned.relevance && draft.relevance && { relevance: draft.relevance }),
+          });
         break;
       case "callout":
         if (nonEmpty(draft.markdown))
@@ -263,6 +274,8 @@ export function buildLesson(planned: PlannedLesson, result: LessonResult, plan: 
       .filter((f) => nonEmpty(f.name) && nonEmpty(f.latex))
       .slice(0, 12)
       .map((f) => ({ name: f.name.trim(), latex: f.latex.trim(), note: f.note?.trim() ?? "" })),
+    relevance: planned.relevance,
+    objectives: planned.objectives,
   };
 }
 

@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { rowsToCourse, type CourseRow, type CourseRows, type QuestionRow } from "./rows";
-import type { Course, Lesson, Unit } from "./schema";
+import type { Course, Lesson, Relevance, Unit } from "./schema";
 
 /*
  * Course reads for server components. They use the signed-in user's Supabase client,
@@ -34,7 +34,7 @@ export const getCourse = cache(async (courseId: string): Promise<LoadedCourse | 
     supabase.from("units").select("id, key, position, title, summary, week").eq("course_id", courseId),
     supabase
       .from("lessons")
-      .select("id, key, unit_id, position, title, summary, est_minutes, blocks, flashcards, formulas")
+      .select("id, key, unit_id, position, title, summary, est_minutes, blocks, flashcards, formulas, relevance, objectives")
       .eq("course_id", courseId),
     supabase.from("concepts").select("id, key, name, description").eq("course_id", courseId),
     supabase
@@ -167,7 +167,7 @@ export type CourseOutline = {
     id: string;
     title: string;
     week: number | null;
-    lessons: { id: string; title: string; estMinutes: number }[];
+    lessons: { id: string; title: string; estMinutes: number; relevance: Relevance | null }[];
     /** Study tools gathered from the unit's lessons. */
     flashcardCount: number;
     formulaCount: number;
@@ -183,7 +183,7 @@ export function outlineOf(course: Course): CourseOutline {
       id: u.id,
       title: u.title,
       week: u.week,
-      lessons: u.lessons.map((l) => ({ id: l.id, title: l.title, estMinutes: l.estMinutes })),
+      lessons: u.lessons.map((l) => ({ id: l.id, title: l.title, estMinutes: l.estMinutes, relevance: l.relevance })),
       flashcardCount: u.lessons.reduce((n, l) => n + l.flashcards.length, 0),
       formulaCount: u.lessons.reduce((n, l) => n + l.formulas.length, 0),
     })),

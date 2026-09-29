@@ -33,6 +33,8 @@ export const outlineSchema = z.object({
           estMinutes: z.number().int(),
           conceptKeys: z.array(z.string()).describe("Keys from `concepts` this lesson teaches"),
           sourceFileIds: z.array(z.string()).describe("IDs of the source files this lesson draws on"),
+          relevance: z.enum(["core", "supporting", "extension"]).nullable(),
+          objectives: z.array(z.string()).describe("Objectives this lesson serves, as short phrases (empty if none given)"),
           plan: z
             .string()
             .describe("What this lesson must teach, in order: key points, examples, what to check. For the lesson writer."),
@@ -50,7 +52,7 @@ const markdown = z.string();
 
 const lessonBlockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), markdown }),
-  z.object({ type: z.literal("heading"), text: z.string() }),
+  z.object({ type: z.literal("heading"), text: z.string(), relevance: z.enum(["core", "supporting", "extension"]).nullable() }),
   z.object({
     type: z.literal("callout"),
     variant: z.enum(["keyIdea", "tip", "warning", "example"]),

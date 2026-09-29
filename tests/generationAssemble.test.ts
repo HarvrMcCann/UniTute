@@ -23,6 +23,8 @@ const outline: Outline = {
       estMinutes: l.estMinutes,
       conceptKeys: l.conceptIds.map((c) => c.slice(2)),
       sourceFileIds: ["file-1", "not-a-real-file"],
+      relevance: null,
+      objectives: [],
       plan: "Teach it.",
     })),
   })),
@@ -130,5 +132,31 @@ describe("lessonBudget", () => {
 
   it("treats files with no week as one teaching week", () => {
     expect(lessonBudget([week(null)], "recommended")).toEqual({ weeks: 1, min: 2, max: 3 });
+  });
+});
+
+describe("objective relevance", () => {
+  const plan = planFromOutline(outline, opts);
+  const planned = plan.units[0].lessons[0];
+  const result = lessonToDraft(course.units[0].lessons[0]);
+  const withSectionLabels: LessonResult = {
+    ...result,
+    content: {
+      ...result.content,
+      blocks: result.content.blocks.map((b) => (b.type === "heading" ? { ...b, relevance: "extension" as const } : b)),
+    },
+  };
+
+  it("carries the lesson's relevance, objectives and section labels", () => {
+    const lesson = buildLesson({ ...planned, relevance: "core", objectives: ["Convert between polar and rectangular form"] }, withSectionLabels, plan);
+    expect(lesson.relevance).toBe("core");
+    expect(lesson.objectives).toEqual(["Convert between polar and rectangular form"]);
+    expect(lesson.blocks.filter((b) => b.type === "heading").every((b) => b.type === "heading" && b.relevance === "extension")).toBe(true);
+  });
+
+  it("drops section labels when the course has no objectives", () => {
+    const lesson = buildLesson({ ...planned, relevance: null, objectives: [] }, withSectionLabels, plan);
+    expect(lesson.relevance).toBeNull();
+    expect(lesson.blocks.some((b) => b.type === "heading" && b.relevance)).toBe(false);
   });
 });

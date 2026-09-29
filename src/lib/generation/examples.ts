@@ -14,7 +14,7 @@ export function lessonToDraft(lesson: Lesson): LessonResult {
       case "text":
         return { type: "text", markdown: b.markdown };
       case "heading":
-        return { type: "heading", text: b.text };
+        return { type: "heading", text: b.text, relevance: b.relevance ?? null };
       case "callout":
         return { type: "callout", variant: b.variant, title: b.title ?? null, markdown: b.markdown };
       case "definition":

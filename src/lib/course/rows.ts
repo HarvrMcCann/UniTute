@@ -1,4 +1,4 @@
-import { courseSchema, type Block, type Course, type Flashcard, type Formula, type Question } from "./schema";
+import { courseSchema, type Block, type Course, type Flashcard, type Formula, type Question, type Relevance } from "./schema";
 
 /*
  * Mapping between the course JSON document and database rows (snake_case).
@@ -36,6 +36,8 @@ export type LessonRow = {
   blocks: Block[];
   flashcards: Flashcard[];
   formulas: Formula[];
+  relevance: Relevance | null;
+  objectives: string[];
 };
 export type ConceptRow = { key: string; name: string; description: string };
 export type LessonConceptRow = { lesson_key: string; concept_key: string; position: number };
@@ -94,6 +96,8 @@ export function courseToRows(course: Course, meta: CourseMeta): CourseRows {
         blocks: lesson.blocks,
         flashcards: lesson.flashcards,
         formulas: lesson.formulas,
+        relevance: lesson.relevance,
+        objectives: lesson.objectives,
       });
       lesson.conceptIds.forEach((conceptKey, position) =>
         rows.lessonConcepts.push({ lesson_key: lesson.id, concept_key: conceptKey, position }),
@@ -173,6 +177,8 @@ export function rowsToCourse(rows: CourseRows): Course {
         questions: (questionsByLesson.get(lesson.key) ?? []).map(rowToQuestion),
         flashcards: lesson.flashcards ?? [],
         formulas: lesson.formulas ?? [],
+        relevance: lesson.relevance ?? null,
+        objectives: lesson.objectives ?? [],
       })),
     })),
   });

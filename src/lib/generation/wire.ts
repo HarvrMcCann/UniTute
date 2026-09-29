@@ -52,6 +52,7 @@ const wireBlock = z.object({
     .nullable()
     .describe("plot only"),
   brief: str.describe("interactive only: the full build spec"),
+  relevance: z.enum(["core", "supporting", "extension"]).nullable().describe("heading only: the section's relevance to the objectives"),
 });
 
 const wireQuestion = z.object({
@@ -90,6 +91,7 @@ const EMPTY: Omit<WireBlock, "type"> = {
   questionRef: null,
   plot: null,
   brief: null,
+  relevance: null,
 };
 
 function blockFromWire(b: WireBlock): LessonBlockDraft | null {
@@ -98,7 +100,7 @@ function blockFromWire(b: WireBlock): LessonBlockDraft | null {
     case "text":
       return has(b.text) ? { type: "text", markdown: b.text } : null;
     case "heading":
-      return has(b.text) ? { type: "heading", text: b.text } : null;
+      return has(b.text) ? { type: "heading", text: b.text, relevance: b.relevance } : null;
     case "callout":
       return has(b.text) ? { type: "callout", variant: b.variant ?? "tip", title: b.title, markdown: b.text } : null;
     case "definition":
@@ -151,7 +153,7 @@ export function toWire(c: LessonContent): LessonWire {
         case "text":
           return { ...EMPTY, type: "text", text: b.markdown };
         case "heading":
-          return { ...EMPTY, type: "heading", text: b.text };
+          return { ...EMPTY, type: "heading", text: b.text, relevance: b.relevance };
         case "callout":
           return { ...EMPTY, type: "callout", variant: b.variant, title: b.title, text: b.markdown };
         case "definition":

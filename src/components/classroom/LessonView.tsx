@@ -5,6 +5,7 @@ import { ArrowLeftIcon, ArrowRightIcon, ClockIcon } from "@/components/ui/icons"
 import type { LessonLocation } from "@/lib/course/load";
 import type { Course } from "@/lib/course/schema";
 import { FadeIn } from "./FadeIn";
+import { RELEVANCE_HINT, RelevanceBadge } from "./RelevanceBadge";
 import { LESSON_END_ID, ProgressTracker } from "./ProgressTracker";
 
 type LessonViewProps = {
@@ -57,6 +58,26 @@ export function LessonView({ course, location, lessonDbId, questionIds, resumeBl
               </li>
             ))}
           </ul>
+          {lesson.relevance && (
+            <div className="mt-5 rounded-2xl border border-line bg-panel px-4 py-3 frost">
+              <div className="flex flex-wrap items-center gap-2">
+                <RelevanceBadge relevance={lesson.relevance} />
+                <span className="text-sm text-muted">{RELEVANCE_HINT[lesson.relevance]}</span>
+              </div>
+              {lesson.objectives.length > 0 && (
+                <ul className="mt-2 space-y-1 text-sm" aria-label="Objectives this lesson covers">
+                  {lesson.objectives.map((o) => (
+                    <li key={o} className="flex gap-2">
+                      <span aria-hidden className="text-accent">
+                        ✓
+                      </span>
+                      <span>{o}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </header>
 
         <div className="mt-10 space-y-6">

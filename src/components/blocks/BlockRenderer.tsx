@@ -1,6 +1,7 @@
 import type { Block, Question } from "@/lib/course/schema";
 import { CalloutBlock } from "./CalloutBlock";
 import { CheckBlock } from "./CheckBlock";
+import { RelevanceBadge } from "@/components/classroom/RelevanceBadge";
 import { CodeBlock } from "./CodeBlock";
 import { DiagramBlock } from "./DiagramBlock";
 import { DefinitionBlock } from "./DefinitionBlock";
@@ -32,7 +33,12 @@ function BlockContent({ block, questions, questionIds }: BlockRendererProps) {
     case "text":
       return <Markdown>{block.markdown}</Markdown>;
     case "heading":
-      return <h2 className="pt-6 font-display text-2xl font-medium tracking-tight sm:text-[1.7rem]">{block.text}</h2>;
+      return (
+        <h2 className="pt-6 font-display text-2xl font-medium tracking-tight sm:text-[1.7rem]">
+          {block.text}
+          {block.relevance && <RelevanceBadge relevance={block.relevance} className="ml-3 -translate-y-0.5" />}
+        </h2>
+      );
     case "callout":
       return <CalloutBlock block={block} />;
     case "definition":

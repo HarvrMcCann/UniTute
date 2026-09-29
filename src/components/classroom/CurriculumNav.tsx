@@ -108,7 +108,17 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
                           {lessonNumbers.get(lesson.id)}
                           <span className="sr-only">{STATUS_LABEL[status]}</span>
                         </span>
-                        <span className="min-w-0 flex-1 leading-snug">{lesson.title}</span>
+                        <span className="min-w-0 flex-1 leading-snug">
+                          {lesson.title}
+                          {lesson.relevance === "extension" && (
+                            <span
+                              title="Covered in the lectures, but your objectives don't ask for it"
+                              className="ml-1.5 inline-block rounded-full border border-dashed border-line px-1.5 text-[0.65rem] text-faint"
+                            >
+                              Beyond
+                            </span>
+                          )}
+                        </span>
                         <span className="shrink-0 text-xs text-faint">{lesson.estMinutes}m</span>
                         <LinkPending />
                       </Link>

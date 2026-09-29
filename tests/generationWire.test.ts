@@ -17,7 +17,7 @@ describe("lesson wire format", () => {
   });
 
   it("drops blocks missing what their type needs", () => {
-    const empty = { text: null, title: null, variant: null, term: null, problem: null, steps: null, answer: null, code: null, language: null, caption: null, questionRef: null, plot: null, brief: null };
+    const empty = { text: null, title: null, variant: null, term: null, problem: null, steps: null, answer: null, code: null, language: null, caption: null, questionRef: null, plot: null, brief: null, relevance: null };
     const content = fromWire({
       blocks: [
         { ...empty, type: "definition", text: "no term" },
@@ -33,7 +33,7 @@ describe("lesson wire format", () => {
 });
 
 describe("parseLessonWire", () => {
-  const empty = { text: null, title: null, variant: null, term: null, problem: null, steps: null, answer: null, code: null, language: null, caption: null, questionRef: null, plot: null, brief: null };
+  const empty = { text: null, title: null, variant: null, term: null, problem: null, steps: null, answer: null, code: null, language: null, caption: null, questionRef: null, plot: null, brief: null, relevance: null };
 
   it("keeps the good items and drops the bad ones", () => {
     const result = parseLessonWire({
