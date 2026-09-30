@@ -12,6 +12,7 @@ import type { Course, Lesson, Relevance, Unit } from "./schema";
 
 export type LoadedCourse = {
   course: Course;
+  ownerId: string | null;
   /** Course-JSON lesson key -> database UUID (progress rows reference the UUID). */
   lessonIds: Map<string, string>;
   /** Course-JSON question key -> database UUID (attempts reference the UUID). */
@@ -73,6 +74,7 @@ export const getCourse = cache(async (courseId: string): Promise<LoadedCourse | 
 
   return {
     course: rowsToCourse(rows),
+    ownerId: courseRow.owner_id,
     lessonIds: new Map([...lessonKey].map(([id, key]) => [key, id])),
     questionIds: new Map((questions.data as Keyed[]).map((q) => [q.key, q.id])),
   };

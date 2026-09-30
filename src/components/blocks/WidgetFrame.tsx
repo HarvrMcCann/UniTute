@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { widgetDocument, type WidgetTheme } from "@/lib/widget/runtime";
+import { WidgetFixForm, type WidgetFixTarget } from "./WidgetFixForm";
 
 type WidgetFrameProps = {
   title: string;
@@ -9,6 +10,8 @@ type WidgetFrameProps = {
   initialHeight: number;
   /** Server-rendered explanation, shown if the widget reports an error. */
   fallback: React.ReactNode;
+  /** Set for the course owner: offers "fix this interactive". */
+  fix?: WidgetFixTarget;
 };
 
 const currentTheme = (): WidgetTheme => (document.documentElement.dataset.theme === "light" ? "light" : "dark");
@@ -18,10 +21,11 @@ const currentTheme = (): WidgetTheme => (document.documentElement.dataset.theme 
  * allow-same-origin gives it an opaque origin: it can't reach the app's cookies, storage or DOM,
  * and its CSP blocks the network. We only accept height and error messages from our own frame.
  */
-export function WidgetFrame({ title, html, initialHeight, fallback }: WidgetFrameProps) {
+export function WidgetFrame({ title, html, initialHeight, fallback, fix }: WidgetFrameProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(initialHeight);
   const [failed, setFailed] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [run, setRun] = useState(0); // bump to restart the widget
   // The document is built once per run with the theme at that moment; later theme changes are posted in.
   const [srcDoc, setSrcDoc] = useState<string | null>(null);
@@ -36,12 +40,13 @@ export function WidgetFrame({ title, html, initialHeight, fallback }: WidgetFram
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.source !== frame.current?.contentWindow) return;
-      const data = e.data as { source?: string; type?: string; height?: unknown };
+      const data = e.data as { source?: string; type?: string; height?: unknown; message?: unknown };
       if (data?.source !== "unitute-widget") return;
       if (data.type === "height" && typeof data.height === "number" && Number.isFinite(data.height)) {
         setHeight(Math.min(1400, Math.max(120, Math.ceil(data.height))));
       } else if (data.type === "error") {
         setFailed(true);
+        if (typeof data.message === "string") setErrorMessage(data.message.slice(0, 200));
       }
     };
     window.addEventListener("message", onMessage);
@@ -73,6 +78,7 @@ export function WidgetFrame({ title, html, initialHeight, fallback }: WidgetFram
         >
           Try the interactive again
         </button>
+        {fix && <WidgetFixForm target={fix} errorMessage={errorMessage} />}
       </div>
     );
   }
@@ -94,7 +100,8 @@ export function WidgetFrame({ title, html, initialHeight, fallback }: WidgetFram
       ) : (
         <div className="animate-pulse rounded-xl bg-hover" style={{ height }} />
       )}
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex flex-wrap items-start justify-end gap-x-4 gap-y-2">
+        {fix && <WidgetFixForm target={fix} errorMessage={null} />}
         <button type="button" onClick={() => setRun((r) => r + 1)} className="text-xs text-faint hover:text-text">
           Reset
         </button>

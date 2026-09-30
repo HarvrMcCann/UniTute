@@ -92,6 +92,7 @@ npm test             # Vitest unit tests (schema validation, mastery formula, et
 npm run seed         # load/refresh the sample course in Supabase (safe to re-run; keeps progress)
 npm run generate -- <courseId> [cram|recommended|deep] [--outline-only]   # build a course without Inngest; SPENDS ANTHROPIC CREDIT
 npm run check:grammar   # after changing ANY generation schema: checks the API accepts each structured-output grammar (~US$0.01)
+npm run fix-widget -- <courseId> [<lessonKey> <blockId> ["what's wrong"]]   # check interactives (free), or fix one with Claude (~US$0.05)
 npm run inngest      # local Inngest dev server (currently blocked by Windows Smart App Control on this machine)
 ```
 

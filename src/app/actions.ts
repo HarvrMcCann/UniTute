@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import type { Theme } from "@/lib/theme";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { FIXES_PER_DAY, fixesToday, fixWidget, MAX_REPORT_CHARS, type FixResult } from "@/lib/widget/fix";
 
 export async function signOut() {
   const supabase = await createClient();
@@ -59,4 +61,31 @@ export async function recordAttempt(questionDbId: string, correct: boolean) {
     .from("attempts")
     .insert({ user_id: user.id, question_id: questionDbId, correct: Boolean(correct) });
   if (error) console.warn("Couldn't record attempt:", error.message);
+}
+
+export type FixInteractiveInput = { courseId: string; lessonKey: string; blockId: string; report: string };
+
+/**
+ * The course owner asks Claude to fix one interactive, describing what's wrong. Limited per course
+ * per day (a stand-in until paid credits exist). Costs roughly US$0.05-0.20 per fix.
+ */
+export async function fixInteractive(input: FixInteractiveInput): Promise<FixResult> {
+  const user = await getUser();
+  if (!user) return { ok: false, reason: "Sign in to fix interactives." };
+  const supabase = await createClient();
+  const { data: course } = await supabase.from("courses").select("owner_id").eq("id", input.courseId).maybeSingle();
+  if (!course || course.owner_id !== user.id) return { ok: false, reason: "Only the course's owner can fix its interactives." };
+
+  const admin = createAdminClient();
+  if ((await fixesToday(admin, input.courseId)) >= FIXES_PER_DAY) {
+    return { ok: false, reason: `You've used today's ${FIXES_PER_DAY} fixes for this course. Try again tomorrow.` };
+  }
+  const result = await fixWidget(admin, {
+    courseId: input.courseId,
+    lessonKey: input.lessonKey,
+    blockId: input.blockId,
+    report: String(input.report ?? "").slice(0, MAX_REPORT_CHARS),
+  });
+  if (result.ok) revalidatePath(`/course/${input.courseId}/${input.lessonKey}`);
+  return result;
 }

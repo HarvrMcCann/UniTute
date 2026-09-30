@@ -17,18 +17,20 @@ type BlockRendererProps = {
   questions: Map<string, Question>;
   /** Question key -> database UUID, for recording attempts. */
   questionIds: Map<string, string>;
+  /** Set for the course owner: interactives get a "fix this" option. */
+  fix?: { courseId: string; lessonKey: string };
 };
 
 /** Wraps each block in an anchor (its stable id) so tutor links, progress and bug reports can point at it. */
-export function BlockRenderer({ block, questions, questionIds }: BlockRendererProps) {
+export function BlockRenderer({ block, questions, questionIds, fix }: BlockRendererProps) {
   return (
     <section id={block.id} data-block-id={block.id} className="scroll-mt-24">
-      <BlockContent block={block} questions={questions} questionIds={questionIds} />
+      <BlockContent block={block} questions={questions} questionIds={questionIds} fix={fix} />
     </section>
   );
 }
 
-function BlockContent({ block, questions, questionIds }: BlockRendererProps) {
+function BlockContent({ block, questions, questionIds, fix }: BlockRendererProps) {
   switch (block.type) {
     case "text":
       return <Markdown>{block.markdown}</Markdown>;
@@ -66,7 +68,7 @@ function BlockContent({ block, questions, questionIds }: BlockRendererProps) {
     case "diagram":
       return <DiagramBlock block={block} />;
     case "widget":
-      return <WidgetBlock block={block} />;
+      return <WidgetBlock block={block} fix={fix && { ...fix, blockId: block.id }} />;
     case "check": {
       const question = questions.get(block.questionId);
       return question ? <CheckBlock question={question} questionDbId={questionIds.get(question.id)!} /> : null;

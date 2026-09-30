@@ -3,6 +3,10 @@ import { notFound } from "next/navigation";
 import { LessonView } from "@/components/classroom/LessonView";
 import { getCourse, locateLesson } from "@/lib/course/load";
 import { getCourseProgress } from "@/lib/progress";
+import { getUser } from "@/lib/supabase/server";
+
+// Fixing an interactive runs Claude inside a server action on this page (about 20-90s).
+export const maxDuration = 300;
 
 export async function generateMetadata({ params }: PageProps<"/course/[courseId]/[lessonId]">): Promise<Metadata> {
   const { courseId, lessonId } = await params;
@@ -17,7 +21,7 @@ export default async function LessonPage({ params }: PageProps<"/course/[courseI
   const location = loaded && locateLesson(loaded.course, lessonId);
   if (!loaded || !location) notFound();
 
-  const progress = await getCourseProgress(loaded);
+  const [progress, user] = await Promise.all([getCourseProgress(loaded), getUser()]);
   const saved = progress.byLesson.get(lessonId);
   // Finished lessons reopen at the top; unfinished ones where you left off.
   const firstBlockId = location.lesson.blocks[0].id;
@@ -31,6 +35,7 @@ export default async function LessonPage({ params }: PageProps<"/course/[courseI
       lessonDbId={loaded.lessonIds.get(lessonId)!}
       questionIds={loaded.questionIds}
       resumeBlockId={resumeBlockId}
+      isOwner={!!user && user.id === loaded.ownerId}
     />
   );
 }

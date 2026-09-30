@@ -14,9 +14,11 @@ type LessonViewProps = {
   lessonDbId: string;
   questionIds: Map<string, string>;
   resumeBlockId: string | null;
+  /** The signed-in user owns this course (can ask for interactives to be fixed). */
+  isOwner: boolean;
 };
 
-export function LessonView({ course, location, lessonDbId, questionIds, resumeBlockId }: LessonViewProps) {
+export function LessonView({ course, location, lessonDbId, questionIds, resumeBlockId, isOwner }: LessonViewProps) {
   const { unit, lesson, prev, next, number, total } = location;
   const questions = new Map(lesson.questions.map((q) => [q.id, q]));
   const conceptNames = new Map(course.concepts.map((c) => [c.id, c.name]));
@@ -87,7 +89,13 @@ export function LessonView({ course, location, lessonDbId, questionIds, resumeBl
 
         <div className="mt-10 space-y-6">
           {lesson.blocks.map((block) => (
-            <BlockRenderer key={block.id} block={block} questions={questions} questionIds={questionIds} />
+            <BlockRenderer
+              key={block.id}
+              block={block}
+              questions={questions}
+              questionIds={questionIds}
+              fix={isOwner ? { courseId: course.id, lessonKey: lesson.id } : undefined}
+            />
           ))}
         </div>
 

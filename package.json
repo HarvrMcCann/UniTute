@@ -12,7 +12,8 @@
     "seed": "tsx --env-file=.env.local scripts/seedSampleCourse.ts",
     "inngest": "inngest-cli dev -u http://localhost:3000/api/inngest --no-discovery",
     "generate": "tsx --env-file=.env.local scripts/generateCourse.ts",
-    "check:grammar": "tsx --env-file=.env.local scripts/checkGrammar.ts"
+    "check:grammar": "tsx --env-file=.env.local scripts/checkGrammar.ts",
+    "fix-widget": "tsx --env-file=.env.local scripts/fixWidget.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
