@@ -1,0 +1,135 @@
+<style>
+.wrap{font-size:14px;color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0}
+.ctrl{flex:1 1 140px;min-width:140px}
+.ctrl label{display:block;margin-bottom:2px;font-size:12.5px;color:var(--muted)}
+.ctrl input[type=range]{width:100%}
+canvas{width:100%;display:block;background:var(--panel);border-radius:10px;border:1px solid var(--line)}
+.eq{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:14.5px}
+.chk{display:flex;align-items:center;gap:8px;margin:8px 0}
+.chk input{width:18px;height:18px}
+.val{color:var(--accent);font-weight:600}
+</style>
+<div class="wrap">
+<div class="row">
+<div class="ctrl"><label>Period N: <span class="val" id="Nv">6</span></label><input type="range" id="N" min="3" max="8" step="1" value="6"></div>
+<div class="ctrl"><label>a₀: <span class="val" id="a0v">1.0</span></label><input type="range" id="a0" min="-2" max="2" step="0.1" value="1"></div>
+<div class="ctrl"><label>|a₁|: <span class="val" id="m1v">0.50</span></label><input type="range" id="m1" min="0" max="2" step="0.05" value="0.5"></div>
+<div class="ctrl"><label>∠a₁ (°): <span class="val" id="p1v">30</span></label><input type="range" id="p1" min="-180" max="180" step="1" value="30"></div>
+</div>
+<div class="eq" id="eq"></div>
+canvas id="main" height="220"></canvas>
+<div class="chk"><input type="checkbox" id="ovl"><label for="ovl">show k = N+1 harmonic (overlay on φ₁[n])</label></div>
+<canvas id="ov" height="140"></canvas>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const N_=$('N'),a0_=$('a0'),m1_=$('m1'),p1_=$('p1'),ovl_=$('ovl');
+const main=$('main'), ov=$('ov');
+let ink,muted,accent,accent2,accent3,line,faint;
+function colors(){
+ const cs=getComputedStyle(document.documentElement);
+ ink=cs.getPropertyValue('--ink').trim()||'#222';
+ muted=cs.getPropertyValue('--muted').trim()||'#888';
+ accent=cs.getPropertyValue('--accent').trim()||'#2b7';
+ accent2=cs.getPropertyValue('--accent-2').trim()||'#e67';
+ accent3=cs.getPropertyValue('--accent-3').trim()||'#79e';
+ line=cs.getPropertyValue('--line').trim()||'#ccc';
+ faint=cs.getPropertyValue('--faint').trim()||'#eee';
+}
+colors();
+window.addEventListener('unitute-theme',()=>{colors();draw();});
+
+function resize(){
+ const w=main.clientWidth||600;
+ main.width=w; main.height=220;
+ ov.width=w; ov.height=140;
+ draw();
+}
+window.addEventListener('resize',resize);
+
+function fmt(x){return (Math.round(x*100)/100).toFixed(2);}
+
+function drawStems(ctx,w,h,xs,ys,color,ymax,x0,x1,lw){
+ const pad=30;
+ const plotW=w-2*pad, plotH=h-2*pad;
+ const xscale=n=> pad + (n-x0)/(x1-x0)*plotW;
+ const yscale=v=> h/2 - v/ymax*(plotH/2);
+ ctx.strokeStyle=color; ctx.fillStyle=color;
+ ctx.lineWidth=lw||2;
+ for(let i=0;i<xs.length;i++){
+ const px=xscale(xs[i]);
+ const py=yscale(ys[i]);
+ const zy=yscale(0);
+ ctx.beginPath();
+ ctx.moveTo(px,zy);
+ ctx.lineTo(px,py);
+ ctx.stroke();
+ ctx.beginPath();
+ ctx.arc(px,py,3.5,0,7);
+ ctx.fill();
+ }
+ return {xscale,yscale};
+}
+
+function drawAxes(ctx,w,h,x0,x1,ymax,label){
+ ctx.clearRect(0,0,w,h);
+ ctx.strokeStyle=line; ctx.fillStyle=muted; ctx.font='11px sans-serif';
+ const pad=30;
+ const plotW=w-2*pad, plotH=h-2*pad;
+ const xscale=n=> pad + (n-x0)/(x1-x0)*plotW;
+ const zy=h/2;
+ ctx.beginPath();
+ ctx.moveTo(pad,zy); ctx.lineTo(w-pad,zy); ctx.stroke();
+ for(let n=x0;n<=x1;n+=Math.ceil((x1-x0)/12)||1){
+ const px=xscale(n);
+ ctx.fillText(n,px-6,zy+16);
+ }
+ ctx.fillText(label,6,14);
+}
+
+function draw(){
+ const N=parseInt(N_.value);
+ const a0=parseFloat(a0_.value);
+ const m1=parseFloat(m1_.value);
+ const p1deg=parseFloat(p1_.value);
+ const p1=p1deg*Math.PI/180;
+ N_.previousElementSibling ? null:null;
+ $('Nv').textContent=N;
+ $('a0v').textContent=fmt(a0);
+ $('m1v').textContent=fmt(m1);
+ $('p1v').textContent=p1deg;
+
+ const w0=2*Math.PI/N;
+ const x0=-2*N, x1=2*N;
+ const xs=[]; const ys=[];
+ for(let n=x0;n<=x1;n++){
+ xs.push(n);
+ ys.push(a0 + 2*m1*Math.cos(w0*n+p1));
+ }
+ const ymax=Math.max(2, Math.abs(a0)+2*m1+0.5);
+ const ctx=main.getContext('2d');
+ colors();
+ drawAxes(ctx,main.width,main.height,x0,x1,ymax,'x[n]');
+ drawStems(ctx,main.width,main.height,xs,ys,accent,ymax,x0,x1,2.5);
+
+ $('eq').innerHTML = 'x[n] = a₀ + 2|a₁|cos(ω₀n + ∠a₁) = '+fmt(a0)+' + 2·'+fmt(m1)+'·cos('+fmt(w0)+'n + '+p1deg+'°),  ω₀ = 2π/N = '+fmt(w0)+' rad';
+
+ const octx=ov.getContext('2d');
+ if(ovl_.checked){
+ ov.style.display='block';
+ const ys1=xs.map(n=>Math.cos(w0*n));
+ const ysN1=xs.map(n=>Math.cos((N+1)*w0*n));
+ drawAxes(octx,ov.width,ov.height,x0,x1,1.3,'φ₁[n] (line) vs φ_{N+1}[n] (dots) — identical');
+ drawStems(octx,ov.width,ov.height,xs,ys1,accent2,1.3,x0,x1,3);
+ drawStems(octx,ov.width,ov.height,xs,ysN1,accent3,1.3,x0,x1,1);
+ } else {
+ octx.clearRect(0,0,ov.width,ov.height);
+ octx.fillStyle=muted; octx.font='13px sans-serif';
+ octx.fillText('Enable checkbox to overlay φ₁[n] and φ_{N+1}[n]',20,ov.height/2);
+ }
+}
+
+[N_,a0_,m1_,p1_,ovl_].forEach(el=>el.addEventListener('input',draw));
+setTimeout(resize,0);
+</script>

@@ -1,0 +1,81 @@
+<style>.wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;font-size:14px;color:var(--ink)}.panel{flex:1 1 300px;min-width:280px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}.panel h3{margin:4px 0 8px;font-size:14px;text-align:center}canvas{width:100%;display:block}.ctrl{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap}.ctrl label{font-weight:600}.readout{color:var(--accent);font-weight:700}input[type=range]{flex:1;min-width:150px}</style><div class="ctrl"><label for="n1slider">N₁ (pulse half-width):</label><input type="range" id="n1slider" min="1" max="6" step="1" value="2"><span class="readout" id="n1val">2</span></div><div class="wrap"><div class="panel"><h3>x[n] — rectangular pulse</h3><canvas id="c1" height="220"></canvas></div><div class="panel"><h3>X(e^{jω}) = sin(ω(N₁+½))/sin(ω/2)</h3><canvas id="c2" height="220"></canvas></div></div><script>
+const slider=document.getElementById('n1slider'),n1val=document.getElementById('n1val');
+const c1=document.getElementById('c1'),c2=document.getElementById('c2');
+const ctx1=c1.getContext('2d'),ctx2=c2.getContext('2d');
+function col(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||'#888';}
+function fitCanvas(c){const dpr=window.devicePixelRatio||1;const rect=c.getBoundingClientRect();c.width=Math.round(rect.width*dpr);c.height=Math.round(220*dpr);return dpr;}
+function drawStem(){
+ const dpr=fitCanvas(c1);ctx1.setTransform(dpr,0,0,dpr,0,0);
+ const W=c1.getBoundingClientRect().width,H=220;
+ ctx1.clearRect(0,0,W,H);
+ const ink=col('--ink'),accent=col('--accent'),faint=col('--faint'),muted=col('--muted');
+ const N1=parseInt(slider.value);
+ const nmin=-10,nmax=10;
+ const pad=30;
+ const xscale=(W-2*pad)/(nmax-nmin);
+ const y0=H-30, yscale=H-60;
+ ctx1.strokeStyle=faint;ctx1.lineWidth=1;
+ ctx1.beginPath();ctx1.moveTo(pad,y0);ctx1.lineTo(W-pad,y0);ctx1.stroke();
+ ctx1.fillStyle=muted;ctx1.font='11px sans-serif';ctx1.textAlign='center';
+ for(let n=nmin;n<=nmax;n+=2){
+  const x=pad+(n-nmin)*xscale;
+  ctx1.fillText(n,x,y0+15);
+ }
+ ctx1.textAlign='right';ctx1.fillText('1',pad-6,y0-yscale+4);
+ ctx1.fillText('0',pad-6,y0+4);
+ for(let n=nmin;n<=nmax;n++){
+  const val=(n>=-N1&&n<=N1)?1:0;
+  const x=pad+(n-nmin)*xscale;
+  const y=y0-val*yscale;
+  ctx1.strokeStyle= val?accent:ink;
+  ctx1.globalAlpha=val?1:0.35;
+  ctx1.lineWidth=2;
+  ctx1.beginPath();ctx1.moveTo(x,y0);ctx1.lineTo(x,y);ctx1.stroke();
+  ctx1.fillStyle=val?accent:ink;
+  ctx1.beginPath();ctx1.arc(x,y,val?4:2.5,0,7);ctx1.fill();
+  ctx1.globalAlpha=1;
+ }
+}
+function Xw(w,N1){
+ const s=Math.sin(w/2);
+ if(Math.abs(s)<1e-9) return 2*N1+1;
+ return Math.sin(w*(N1+0.5))/s;
+}
+function drawLine(){
+ const dpr=fitCanvas(c2);ctx2.setTransform(dpr,0,0,dpr,0,0);
+ const W=c2.getBoundingClientRect().width,H=220;
+ ctx2.clearRect(0,0,W,H);
+ const ink=col('--ink'),accent2=col('--accent-2'),faint=col('--faint'),muted=col('--muted');
+ const N1=parseInt(slider.value);
+ const maxY=2*N1+1;
+ const pad=34;
+ const y0=H/2;
+ const yscale=(H/2-16)/maxY;
+ const xscale=(W-2*pad)/(2*Math.PI);
+ ctx2.strokeStyle=faint;ctx2.lineWidth=1;
+ ctx2.beginPath();ctx2.moveTo(pad,y0);ctx2.lineTo(W-pad,y0);ctx2.stroke();
+ ctx2.beginPath();ctx2.moveTo(pad,16);ctx2.lineTo(pad,H-16);ctx2.stroke();
+ ctx2.fillStyle=muted;ctx2.font='11px sans-serif';ctx2.textAlign='center';
+ const labels=[['-π',-Math.PI],['-π/2',-Math.PI/2],['0',0],['π/2',Math.PI/2],['π',Math.PI]];
+ labels.forEach(([t,w])=>{const x=pad+(w+Math.PI)*xscale;ctx2.fillText(t,x,H-4);});
+ ctx2.textAlign='right';
+ ctx2.fillText(maxY.toFixed(0),pad-4,16+8);
+ ctx2.fillText('0',pad-4,y0+4);
+ ctx2.strokeStyle=accent2;ctx2.lineWidth=2;
+ ctx2.beginPath();
+ const steps=600;
+ for(let i=0;i<=steps;i++){
+  const w=-Math.PI+(2*Math.PI*i/steps);
+  const val=Xw(w,N1);
+  const x=pad+(w+Math.PI)*xscale;
+  const y=y0-val*yscale;
+  if(i===0)ctx2.moveTo(x,y);else ctx2.lineTo(x,y);
+ }
+ ctx2.stroke();
+}
+function drawAll(){n1val.textContent=slider.value;drawStem();drawLine();}
+slider.addEventListener('input',drawAll);
+window.addEventListener('resize',drawAll);
+window.addEventListener('unitute-theme',drawAll);
+drawAll();
+</script>

@@ -55,6 +55,12 @@ function BlockContent({ block, questions, questionIds }: BlockRendererProps) {
       return (
         <PlotBlock
           spec={{ title: block.title, caption: block.caption, x: block.x, y: block.y, params: block.params, series: block.series }}
+          labels={{
+            title: block.title ? <Markdown inline>{block.title}</Markdown> : undefined,
+            caption: block.caption ? <Markdown inline>{block.caption}</Markdown> : undefined,
+            series: block.series.map((s) => <Markdown key={s.label} inline>{s.label}</Markdown>),
+            params: block.params.map((p) => <Markdown key={p.name} inline>{p.label}</Markdown>),
+          }}
         />
       );
     case "diagram":

@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { saveCourse } from "@/lib/course/save";
 import { assembleCourse, planFromOutline, type CoursePlan, type LengthMode, type PlannedUnit } from "./assemble";
 import { callStructured, GENERATION_MODEL, type Usage } from "./claude";
-import { courseOutlineText, LESSON_SYSTEM, lessonRequest, OUTLINE_SYSTEM, outlinePrompt, WIDGET_SYSTEM, widgetRequest } from "./prompts";
+import { courseOutlineText, LESSON_SYSTEM, lessonRequest, OUTLINE_SYSTEM, outlinePrompt, WIDGET_SYSTEM, widgetRepairRequest, widgetRequest } from "./prompts";
+import { describeProblems, hasErrors, lintWidget, type WidgetProblem } from "@/lib/widget/lint";
 import { outlineSchema, widgetBuildSchema, type LessonContent, type LessonResult, type WidgetBuild } from "./schemas";
 import { fromWire, lessonWireSchema, parseLessonWire } from "./wire";
 
@@ -215,6 +216,7 @@ export async function buildWidget(
   opts: { effort: "low" | "medium"; finalAttempt: boolean } = { effort: "medium", finalAttempt: true },
 ): Promise<WidgetBuild | null> {
   const lesson = plan.units.flatMap((u) => u.lessons).find((l) => l.id === lessonId)!;
+  const label = `widget ${lessonId} #${index + 1}`;
   try {
     const { data } = await callStructured({
       system: WIDGET_SYSTEM,
@@ -227,12 +229,49 @@ export async function buildWidget(
       schema: widgetBuildSchema,
       maxTokens: 32_000,
       effort: opts.effort,
-      onUsage: (usage, ms) => logUsage(admin, inputs.courseId, `widget ${lessonId} #${index + 1}`, usage, ms),
+      onUsage: (usage, ms) => logUsage(admin, inputs.courseId, label, usage, ms),
+    });
+    const problems = lintWidget(data.html);
+    if (!problems.length) return data;
+
+    // One repair round. Warnings alone don't justify failing: keep the original if the repair doesn't help.
+    console.warn(`${label}: repairing
+${describeProblems(problems)}`);
+    const repaired = await repairWidget(admin, inputs.courseId, label, { ...request, html: data.html, problems }, opts.effort);
+    if (repaired && !hasErrors(lintWidget(repaired.html))) return repaired;
+    if (!hasErrors(problems)) return data;
+    throw new Error(`still broken after repair: ${problems.map((p) => p.message).join(" ")}`);
+  } catch (error) {
+    console.warn(`${label} failed: ${error instanceof Error ? error.message : error}`);
+    if (!opts.finalAttempt) throw error;
+    return null;
+  }
+}
+
+/**
+ * Asks Claude to fix a widget, given the automatic check's findings and optionally a student's
+ * description of what's wrong. Returns null if the call fails. Used during generation and, later,
+ * by the "fix this interactive" request.
+ */
+export async function repairWidget(
+  admin: SupabaseClient,
+  courseId: string,
+  label: string,
+  input: { title: string; brief: string; html: string; problems: WidgetProblem[]; userReport?: string },
+  effort: "low" | "medium",
+): Promise<WidgetBuild | null> {
+  try {
+    const { data } = await callStructured({
+      system: WIDGET_SYSTEM,
+      content: [{ type: "text", text: widgetRepairRequest({ ...input, problems: describeProblems(input.problems) }) }],
+      schema: widgetBuildSchema,
+      maxTokens: 32_000,
+      effort,
+      onUsage: (usage, ms) => logUsage(admin, courseId, `${label} repair`, usage, ms),
     });
     return data.html.trim() ? data : null;
   } catch (error) {
-    console.warn(`widget ${lessonId} #${index + 1} failed: ${error instanceof Error ? error.message : error}`);
-    if (!opts.finalAttempt) throw error;
+    console.warn(`${label} repair failed: ${error instanceof Error ? error.message : error}`);
     return null;
   }
 }

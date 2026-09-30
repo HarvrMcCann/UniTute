@@ -63,6 +63,8 @@ input[type=range]{accent-color:var(--accent);padding:0;background:none;border:0;
 input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 label{color:var(--muted);font-size:14px}
 canvas,svg,img{max-width:100%}
+.math{font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;font-size:1.05em}
+sup,sub{font-size:.72em;line-height:0}
 `;
 
 // Runs before the widget's own scripts: reports height and errors, applies theme changes.
@@ -70,8 +72,18 @@ const BRIDGE = `
 (function(){
   var post=function(m){m.source="unitute-widget";parent.postMessage(m,"*")};
   var last=0;
-  var report=function(){var h=Math.ceil(document.documentElement.scrollHeight);if(h!==last){last=h;post({type:"height",height:h})}};
-  new ResizeObserver(report).observe(document.documentElement);
+  // Measure the content itself: the document's scrollHeight is never less than the frame, so it could only grow.
+  var report=function(){if(!document.body)return;var h=Math.ceil(document.body.getBoundingClientRect().height)+2;if(h!==last){last=h;post({type:"height",height:h})}};
+  // Maths in text: UniTute.math(el, "X(e^{jω})") or class="math" turns ^{..} _{..} ^x _x into real super/subscripts.
+  var fmt=function(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/\\^\\{([^}]*)\\}/g,"<sup>$1</sup>").replace(/_\\{([^}]*)\\}/g,"<sub>$1</sub>")
+    .replace(/\\^([A-Za-z0-9+\\u2212\\-\\u0370-\\u03FF])/g,"<sup>$1</sup>").replace(/_([A-Za-z0-9\\u0370-\\u03FF])/g,"<sub>$1</sub>")};
+  window.UniTute={math:function(el,s){el.innerHTML=fmt(s==null?el.textContent:s)}};
+  document.addEventListener("DOMContentLoaded",function(){
+    document.querySelectorAll(".math").forEach(function(el){window.UniTute.math(el)});
+    new ResizeObserver(report).observe(document.body);
+    report();
+  });
   window.addEventListener("load",report);
   window.addEventListener("error",function(e){post({type:"error",message:String(e.message||"error").slice(0,200)})});
   window.addEventListener("message",function(e){

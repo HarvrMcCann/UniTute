@@ -25,9 +25,12 @@ export function WidgetFrame({ title, html, initialHeight, fallback }: WidgetFram
   const [run, setRun] = useState(0); // bump to restart the widget
   // The document is built once per run with the theme at that moment; later theme changes are posted in.
   const [srcDoc, setSrcDoc] = useState<string | null>(null);
+  // The frame's color-scheme must match the document inside it, or the browser paints an opaque backdrop.
+  const [theme, setTheme] = useState<WidgetTheme>("dark");
 
   useEffect(() => {
-    setSrcDoc(widgetDocument(html, currentTheme())); // eslint-disable-line react-hooks/set-state-in-effect -- needs the client theme
+    setTheme(currentTheme()); // eslint-disable-line react-hooks/set-state-in-effect -- needs the client theme
+    setSrcDoc(widgetDocument(html, currentTheme()));
   }, [html, run]);
 
   useEffect(() => {
@@ -44,7 +47,10 @@ export function WidgetFrame({ title, html, initialHeight, fallback }: WidgetFram
     window.addEventListener("message", onMessage);
 
     // Follow the app's theme toggle.
-    const observer = new MutationObserver(() => frame.current?.contentWindow?.postMessage({ type: "theme", theme: currentTheme() }, "*"));
+    const observer = new MutationObserver(() => {
+      setTheme(currentTheme());
+      frame.current?.contentWindow?.postMessage({ type: "theme", theme: currentTheme() }, "*");
+    });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     return () => {
@@ -83,7 +89,7 @@ export function WidgetFrame({ title, html, initialHeight, fallback }: WidgetFram
           referrerPolicy="no-referrer"
           loading="lazy"
           className="block w-full border-0 bg-transparent"
-          style={{ height, colorScheme: "normal" }}
+          style={{ height, colorScheme: theme }}
         />
       ) : (
         <div className="animate-pulse rounded-xl bg-hover" style={{ height }} />

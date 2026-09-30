@@ -16,8 +16,28 @@ const MAX_STEMS = 200;
 
 type PlotSpec = Omit<BlockOf<"plot">, "id" | "type" | "conceptIds">;
 
+/** Server-rendered (markdown + KaTeX) versions of the plot's text; plain strings are the fallback. */
+export type PlotLabels = {
+  title?: React.ReactNode;
+  caption?: React.ReactNode;
+  series?: React.ReactNode[];
+  params?: React.ReactNode[];
+};
+
+/** Each stem series gets its own marker, so overlapping series stay distinguishable. */
+function StemMarker({ kind, cx, cy, colour }: { kind: number; cx: number; cy: number; colour: string }) {
+  switch (kind % 3) {
+    case 1:
+      return <circle cx={cx} cy={cy} r="4.5" fill="var(--bg)" stroke={colour} strokeWidth="2" />;
+    case 2:
+      return <rect x={cx - 3.5} y={cy - 3.5} width="7" height="7" fill={colour} />;
+    default:
+      return <circle cx={cx} cy={cy} r="3.5" fill={colour} />;
+  }
+}
+
 /** A graph of formulas drawn in SVG, with sliders for parameters and a readout that follows the pointer. */
-export function PlotBlock({ spec }: { spec: PlotSpec }) {
+export function PlotBlock({ spec, labels = {} }: { spec: PlotSpec; labels?: PlotLabels }) {
   const { x, y, params, series } = spec;
   const [values, setValues] = useState(() => Object.fromEntries(params.map((p) => [p.name, p.value])));
   const [hoverX, setHoverX] = useState<number | null>(null);
@@ -97,14 +117,21 @@ export function PlotBlock({ spec }: { spec: PlotSpec }) {
     setHoverX(series.some((s) => s.style === "stem") ? Math.round(xv) : xv);
   }
 
+  const seriesLabel = (i: number) => labels.series?.[i] ?? series[i].label;
   const readout =
     hoverX === null
       ? null
-      : series.map((s, i) => ({ label: s.label, colour: COLOURS[i % COLOURS.length], value: evalAt(compiled[i], hoverX) }));
+      : series.map((s, i) => ({ key: s.label, label: seriesLabel(i), colour: COLOURS[i % COLOURS.length], value: evalAt(compiled[i], hoverX) }));
+
+  // Stem series side by side: nudge each sideways a little so identical values don't hide each other.
+  const stemIndex = series.map((s, i) => (s.style === "stem" ? series.slice(0, i).filter((t) => t.style === "stem").length : -1));
+  const stemCount = stemIndex.filter((n) => n >= 0).length;
+  const stemSpacing = Math.min(6, (PW / Math.max(1, x.max - x.min)) * 0.25);
+  const stemOffset = (i: number) => (stemCount > 1 ? (stemIndex[i] - (stemCount - 1) / 2) * stemSpacing : 0);
 
   return (
     <figure className="rounded-2xl border border-line bg-panel p-4 frost sm:p-5">
-      {spec.title && <p className="font-display text-lg">{spec.title}</p>}
+      {spec.title && <p className="font-display text-lg">{labels.title ?? spec.title}</p>}
 
       <svg
         ref={svgRef}
@@ -152,12 +179,16 @@ export function PlotBlock({ spec }: { spec: PlotSpec }) {
         <g clipPath={`url(#${clipId})`}>
           {paths.map((d, i) => d && <path key={i} d={d} fill="none" stroke={COLOURS[i % COLOURS.length]} strokeWidth="2.25" strokeLinejoin="round" />)}
           {stems.map((points, i) =>
-            points.map((p) => (
-              <g key={`${i}-${p.x}`} stroke={COLOURS[i % COLOURS.length]} fill={COLOURS[i % COLOURS.length]}>
-                <line x1={px(p.x)} x2={px(p.x)} y1={py(Math.max(y.min, Math.min(y.max, 0)))} y2={py(p.y)} strokeWidth="2" />
-                <circle cx={px(p.x)} cy={py(p.y)} r="3.5" />
-              </g>
-            )),
+            points.map((p) => {
+              const colour = COLOURS[i % COLOURS.length];
+              const cx = px(p.x) + stemOffset(i);
+              return (
+                <g key={`${i}-${p.x}`}>
+                  <line x1={cx} x2={cx} y1={py(Math.max(y.min, Math.min(y.max, 0)))} y2={py(p.y)} stroke={colour} strokeWidth="2" />
+                  <StemMarker kind={stemIndex[i]} cx={cx} cy={py(p.y)} colour={colour} />
+                </g>
+              );
+            }),
           )}
           {hoverX !== null && <line x1={px(hoverX)} x2={px(hoverX)} y1={M.top} y2={M.top + PH} stroke="var(--text-faint)" strokeDasharray="4 4" />}
         </g>
@@ -171,7 +202,7 @@ export function PlotBlock({ spec }: { spec: PlotSpec }) {
               {x.label.split(" (")[0]} = {formatValue(hoverX!)}
             </span>
             {readout.map((r) => (
-              <span key={r.label} style={{ color: r.colour }}>
+              <span key={r.key} style={{ color: r.colour }}>
                 {r.label}: {formatValue(r.value)}
               </span>
             ))}
@@ -180,8 +211,14 @@ export function PlotBlock({ spec }: { spec: PlotSpec }) {
           series.length > 1 &&
           series.map((s, i) => (
             <span key={s.label} className="flex items-center gap-1.5 text-muted">
-              <span className="h-0.5 w-4 rounded" style={{ background: COLOURS[i % COLOURS.length] }} />
-              {s.label}
+              {s.style === "stem" ? (
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                  <StemMarker kind={stemIndex[i]} cx={5} cy={5} colour={COLOURS[i % COLOURS.length]} />
+                </svg>
+              ) : (
+                <span className="h-0.5 w-4 rounded" style={{ background: COLOURS[i % COLOURS.length] }} />
+              )}
+              {seriesLabel(i)}
             </span>
           ))
         )}
@@ -189,10 +226,10 @@ export function PlotBlock({ spec }: { spec: PlotSpec }) {
 
       {params.length > 0 && (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {params.map((p) => (
+          {params.map((p, i) => (
             <label key={p.name} className="block">
               <span className="flex justify-between text-sm">
-                <span className="text-muted">{p.label}</span>
+                <span className="text-muted">{labels.params?.[i] ?? p.label}</span>
                 <span className="font-medium tabular-nums">{formatValue(values[p.name], p.step)}</span>
               </span>
               <input
@@ -209,7 +246,7 @@ export function PlotBlock({ spec }: { spec: PlotSpec }) {
         </div>
       )}
 
-      {spec.caption && <figcaption className="mt-3 text-sm text-muted">{spec.caption}</figcaption>}
+      {spec.caption && <figcaption className="mt-3 text-sm text-muted">{labels.caption ?? spec.caption}</figcaption>}
     </figure>
   );
 }
