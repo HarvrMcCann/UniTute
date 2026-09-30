@@ -2,7 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { saveCourse } from "@/lib/course/save";
 import { assembleCourse, planFromOutline, type CoursePlan, type LengthMode, type PlannedUnit } from "./assemble";
-import { callStructured, GENERATION_MODEL, type Usage } from "./claude";
+import { callStructured, estimateCostUsd, GENERATION_MODEL, type Usage } from "./claude";
 import { courseOutlineText, LESSON_SYSTEM, lessonRequest, OUTLINE_SYSTEM, outlinePrompt, WIDGET_SYSTEM, widgetRepairRequest, widgetRequest } from "./prompts";
 import { describeProblems, hasErrors, lintWidget, type WidgetProblem } from "@/lib/widget/lint";
 import { outlineSchema, widgetBuildSchema, type LessonContent, type LessonResult, type WidgetBuild } from "./schemas";
@@ -259,6 +259,8 @@ export async function repairWidget(
   label: string,
   input: { title: string; brief: string; html: string; problems: WidgetProblem[]; userReport?: string },
   effort: "low" | "medium",
+  /** Told the API cost of the call as soon as it's known (even if the result is unusable). */
+  onCost?: (usd: number) => void,
 ): Promise<WidgetBuild | null> {
   try {
     const { data } = await callStructured({
@@ -267,7 +269,10 @@ export async function repairWidget(
       schema: widgetBuildSchema,
       maxTokens: 32_000,
       effort,
-      onUsage: (usage, ms) => logUsage(admin, courseId, `${label} repair`, usage, ms),
+      onUsage: (usage, ms) => {
+        onCost?.(estimateCostUsd(usage));
+        return logUsage(admin, courseId, `${label} repair`, usage, ms);
+      },
     });
     return data.html.trim() ? data : null;
   } catch (error) {

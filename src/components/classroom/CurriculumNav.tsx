@@ -6,6 +6,8 @@ import { useState } from "react";
 import { LinkPending } from "@/components/ui/LinkPending";
 import { ArrowLeftIcon, ChevronIcon } from "@/components/ui/icons";
 import type { CourseOutline } from "@/lib/course/load";
+import { averageScore, effectiveScore } from "@/lib/mastery";
+import { MasteryBar } from "./MasteryBar";
 import { useProgress, type LessonStatus } from "./ProgressContext";
 
 const STATUS_LABEL: Record<LessonStatus, string> = {
@@ -21,7 +23,8 @@ type CurriculumNavProps = {
 };
 
 export function CurriculumNav({ outline, currentLessonId, onNavigate }: CurriculumNavProps) {
-  const { statusOf } = useProgress();
+  const { statusOf, mastery } = useProgress();
+  const knowledgeHref = `/course/${outline.id}/knowledge`;
   const currentPath = usePathname();
   const [collapsedUnits, setCollapsedUnits] = useState<Set<string>>(new Set());
   const lessonNumbers = new Map(
@@ -49,6 +52,11 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
         </Link>
         {outline.courseCode && <p className="mt-3 text-xs font-medium text-accent">{outline.courseCode}</p>}
         <p className="mt-1 font-display text-lg leading-snug">{outline.title}</p>
+        <div className="mt-3">
+          <StudyToolLink href={knowledgeHref} current={currentPath === knowledgeHref} onNavigate={onNavigate}>
+            Knowledge level
+          </StudyToolLink>
+        </div>
       </div>
 
       <div className="scroll-thin flex-1 overflow-y-auto px-2 py-3">
@@ -79,6 +87,7 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
                 {unit.lessons.map((lesson) => {
                   const current = lesson.id === currentLessonId;
                   const status = statusOf(lesson.id);
+                  const score = averageScore(lesson.conceptIds.map((c) => effectiveScore(mastery[c])));
                   return (
                     <li key={lesson.id}>
                       <Link
@@ -118,6 +127,7 @@ export function CurriculumNav({ outline, currentLessonId, onNavigate }: Curricul
                               Beyond
                             </span>
                           )}
+                          {score !== null && <MasteryBar score={score} className="mt-1.5 w-16" />}
                         </span>
                         <span className="shrink-0 text-xs text-faint">{lesson.estMinutes}m</span>
                         <LinkPending />

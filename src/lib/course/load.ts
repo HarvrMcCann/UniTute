@@ -17,6 +17,8 @@ export type LoadedCourse = {
   lessonIds: Map<string, string>;
   /** Course-JSON question key -> database UUID (attempts reference the UUID). */
   questionIds: Map<string, string>;
+  /** Course-JSON concept key -> database UUID (mastery references the UUID). */
+  conceptIds: Map<string, string>;
 };
 
 type Keyed = { id: string; key: string };
@@ -77,6 +79,7 @@ export const getCourse = cache(async (courseId: string): Promise<LoadedCourse | 
     ownerId: courseRow.owner_id,
     lessonIds: new Map([...lessonKey].map(([id, key]) => [key, id])),
     questionIds: new Map((questions.data as Keyed[]).map((q) => [q.key, q.id])),
+    conceptIds: new Map([...conceptKey].map(([id, key]) => [key, id])),
   };
 });
 
@@ -169,7 +172,7 @@ export type CourseOutline = {
     id: string;
     title: string;
     week: number | null;
-    lessons: { id: string; title: string; estMinutes: number; relevance: Relevance | null }[];
+    lessons: { id: string; title: string; estMinutes: number; relevance: Relevance | null; conceptIds: string[] }[];
     /** Study tools gathered from the unit's lessons. */
     flashcardCount: number;
     formulaCount: number;
@@ -185,7 +188,7 @@ export function outlineOf(course: Course): CourseOutline {
       id: u.id,
       title: u.title,
       week: u.week,
-      lessons: u.lessons.map((l) => ({ id: l.id, title: l.title, estMinutes: l.estMinutes, relevance: l.relevance })),
+      lessons: u.lessons.map((l) => ({ id: l.id, title: l.title, estMinutes: l.estMinutes, relevance: l.relevance, conceptIds: l.conceptIds })),
       flashcardCount: u.lessons.reduce((n, l) => n + l.flashcards.length, 0),
       formulaCount: u.lessons.reduce((n, l) => n + l.formulas.length, 0),
     })),

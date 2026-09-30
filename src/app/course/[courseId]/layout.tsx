@@ -26,6 +26,8 @@ export default async function CourseLayout({ children, params }: LayoutProps<"/c
       initialScrolled={scrolled}
       initialAnswered={[...progress.answered]}
       lessonQuestions={lessonQuestions}
+      initialMastery={progress.mastery}
+      initialCredit={progress.credit}
     >
       <ClassroomShell
         outline={outlineOf(loaded.course)}

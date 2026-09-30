@@ -12,7 +12,7 @@ const TYPE_LABELS: Record<Question["type"], string> = {
 /** Server part of a knowledge check: renders all markdown, then hands the nodes to a client component. */
 export function CheckBlock({ question, questionDbId }: { question: Question; questionDbId: string }) {
   const explanation = <Markdown>{question.explanation}</Markdown>;
-  const ids = { questionKey: question.id, questionDbId };
+  const ids = { questionKey: question.id, questionDbId, conceptKey: question.conceptId };
 
   return (
     <div className="rounded-2xl border border-line bg-panel p-5 frost sm:p-6">

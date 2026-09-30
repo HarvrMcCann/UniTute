@@ -30,7 +30,7 @@ async function main() {
 
   const started = Date.now();
   const result = await fixWidget(admin, { courseId, lessonKey, blockId, report });
-  console.log(result.ok ? `fixed in ${Math.round((Date.now() - started) / 1000)}s` : `not fixed: ${result.reason}`);
+  console.log(`${result.ok ? "fixed" : `not fixed: ${result.reason}`} (${Math.round((Date.now() - started) / 1000)}s, API cost US$${result.apiCostUsd.toFixed(3)})`);
   if (!result.ok) process.exitCode = 1;
 }
 

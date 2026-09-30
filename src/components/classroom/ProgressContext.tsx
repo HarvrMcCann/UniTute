@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import type { MasteryState } from "@/lib/mastery";
 
 /**
  * - "none": not scrolled to the end yet
@@ -15,6 +16,12 @@ type ProgressContextValue = {
   statusOf: (lessonKey: string) => LessonStatus;
   markScrolled: (lessonKey: string) => void;
   markAnswered: (questionKey: string) => void;
+  /** Knowledge level per concept key (only concepts with a level). */
+  mastery: Record<string, MasteryState>;
+  setMastery: (conceptKey: string, state: MasteryState) => void;
+  /** Prepaid credit in US dollars, for AI marking. */
+  credit: number;
+  setCredit: (usd: number) => void;
 };
 
 const ProgressContext = createContext<ProgressContextValue>({
@@ -22,6 +29,10 @@ const ProgressContext = createContext<ProgressContextValue>({
   statusOf: () => "none",
   markScrolled: () => {},
   markAnswered: () => {},
+  mastery: {},
+  setMastery: () => {},
+  credit: 0,
+  setCredit: () => {},
 });
 
 type ProgressProviderProps = {
@@ -32,6 +43,8 @@ type ProgressProviderProps = {
   initialAnswered: string[];
   /** Lesson key -> its question keys. */
   lessonQuestions: Record<string, string[]>;
+  initialMastery: Record<string, MasteryState>;
+  initialCredit: number;
   children: React.ReactNode;
 };
 
@@ -42,8 +55,16 @@ export function ProgressProvider({
   initialScrolled,
   initialAnswered,
   lessonQuestions,
+  initialMastery,
+  initialCredit,
   children,
 }: ProgressProviderProps) {
+  const [mastery, setMasteryMap] = useState(initialMastery);
+  const [credit, setCredit] = useState(initialCredit);
+  const setMastery = useCallback(
+    (conceptKey: string, state: MasteryState) => setMasteryMap((prev) => ({ ...prev, [conceptKey]: state })),
+    [],
+  );
   const [scrolled, setScrolled] = useState(() => new Set(initialScrolled));
   const [answered, setAnswered] = useState(() => new Set(initialAnswered));
 
@@ -59,8 +80,8 @@ export function ProgressProvider({
   );
 
   const value = useMemo(
-    () => ({ userId, statusOf, markScrolled, markAnswered }),
-    [userId, statusOf, markScrolled, markAnswered],
+    () => ({ userId, statusOf, markScrolled, markAnswered, mastery, setMastery, credit, setCredit }),
+    [userId, statusOf, markScrolled, markAnswered, mastery, setMastery, credit],
   );
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
 }

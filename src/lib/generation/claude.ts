@@ -3,14 +3,19 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 
 /*
- * Claude calls for course generation. Claude Sonnet generates courses (PLAN.md);
- * the tutor will use Claude Haiku in phase 7.
+ * Claude calls. Claude Sonnet generates courses (PLAN.md); Claude Haiku marks short answers
+ * and will run the tutor in phase 7.
  */
 
 export const GENERATION_MODEL = "claude-sonnet-5";
+export const MARKING_MODEL = "claude-haiku-4-5";
+type Model = typeof GENERATION_MODEL | typeof MARKING_MODEL;
 
-// USD per million tokens for GENERATION_MODEL. Check anthropic.com/pricing if these change.
-const PRICE = { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 };
+// USD per million tokens. Check anthropic.com/pricing if these change.
+const PRICES: Record<Model, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
+  [GENERATION_MODEL]: { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 },
+  [MARKING_MODEL]: { input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1 },
+};
 
 export type Usage = {
   input_tokens: number;
@@ -19,7 +24,8 @@ export type Usage = {
   cache_read_input_tokens: number;
 };
 
-export function estimateCostUsd(u: Usage): number {
+export function estimateCostUsd(u: Usage, model: Model = GENERATION_MODEL): number {
+  const PRICE = PRICES[model];
   return (
     (u.input_tokens * PRICE.input +
       u.output_tokens * PRICE.output +
@@ -47,7 +53,10 @@ type StructuredCall<T extends z.ZodType> = {
   content: Anthropic.ContentBlockParam[];
   schema: T;
   maxTokens: number;
-  effort: "low" | "medium" | "high";
+  /** Defaults to GENERATION_MODEL. Haiku runs without thinking or effort (it doesn't support effort). */
+  model?: Model;
+  /** Thinking effort for GENERATION_MODEL (ignored for Haiku). */
+  effort?: "low" | "medium" | "high";
   /** Called as soon as the response arrives, before validation, so failed calls are still counted. */
   onUsage?: (usage: Usage, durationMs: number) => Promise<void>;
   /** Custom validation (e.g. item-by-item, dropping bad items). Defaults to schema.safeParse. */
@@ -72,11 +81,13 @@ export async function callStructured<T extends z.ZodType>(
   call: StructuredCall<T>,
 ): Promise<{ data: z.infer<T>; usage: Usage; durationMs: number }> {
   const started = Date.now();
+  const model = call.model ?? GENERATION_MODEL;
+  const thinks = model === GENERATION_MODEL;
   const stream = anthropic().messages.stream({
-    model: GENERATION_MODEL,
+    model,
     max_tokens: call.maxTokens,
-    thinking: { type: "adaptive" },
-    output_config: { effort: call.effort, format: outputFormat(call.schema) },
+    ...(thinks ? { thinking: { type: "adaptive" as const } } : {}),
+    output_config: { ...(thinks ? { effort: call.effort ?? "medium" } : {}), format: outputFormat(call.schema) },
     system: [{ type: "text", text: call.system, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: call.content }],
   });

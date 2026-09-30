@@ -1,6 +1,9 @@
 import "server-only";
 import { cache } from "react";
+import { toState } from "@/lib/answers";
 import type { LoadedCourse } from "@/lib/course/load";
+import { getCredit } from "@/lib/credits";
+import type { MasteryState } from "@/lib/mastery";
 import { createClient, getUser } from "@/lib/supabase/server";
 
 export type LessonProgress = { lastBlockId: string | null; completed: boolean };
@@ -12,9 +15,13 @@ export type CourseProgress = {
   lastVisited: string | null;
   /** Question keys the learner has finished at least once. */
   answered: Set<string>;
+  /** Knowledge level per course-JSON concept key (only concepts with a row). */
+  mastery: Record<string, MasteryState>;
+  /** Prepaid credit in US dollars (0 when signed out). */
+  credit: number;
 };
 
-const EMPTY: CourseProgress = { byLesson: new Map(), lastVisited: null, answered: new Set() };
+const EMPTY: CourseProgress = { byLesson: new Map(), lastVisited: null, answered: new Set(), mastery: {}, credit: 0 };
 
 /** The signed-in user's progress in one course (empty when signed out). */
 export const getCourseProgress = cache(async (loaded: LoadedCourse): Promise<CourseProgress> => {
@@ -22,7 +29,7 @@ export const getCourseProgress = cache(async (loaded: LoadedCourse): Promise<Cou
   if (!user) return EMPTY;
 
   const supabase = await createClient();
-  const [progress, attempts] = await Promise.all([
+  const [progress, attempts, masteryRows, credit] = await Promise.all([
     supabase
       .from("lesson_progress")
       .select("lesson_id, last_block_id, completed_at, updated_at")
@@ -34,9 +41,16 @@ export const getCourseProgress = cache(async (loaded: LoadedCourse): Promise<Cou
       .select("question_id")
       .eq("user_id", user.id)
       .in("question_id", [...loaded.questionIds.values()]),
+    supabase
+      .from("mastery")
+      .select("concept_id, score, attempts, user_override")
+      .eq("user_id", user.id)
+      .in("concept_id", [...loaded.conceptIds.values()]),
+    getCredit(supabase, user.id),
   ]);
   if (progress.error) throw new Error(progress.error.message);
   if (attempts.error) throw new Error(attempts.error.message);
+  if (masteryRows.error) throw new Error(masteryRows.error.message);
 
   const lessonKeyOf = new Map([...loaded.lessonIds].map(([key, id]) => [id, key]));
   const byLesson = new Map<string, LessonProgress>();
@@ -49,7 +63,14 @@ export const getCourseProgress = cache(async (loaded: LoadedCourse): Promise<Cou
   const questionKeyOf = new Map([...loaded.questionIds].map(([key, id]) => [id, key]));
   const answered = new Set(attempts.data.map((a) => questionKeyOf.get(a.question_id)).filter((k) => k !== undefined));
 
-  return { byLesson, lastVisited, answered };
+  const conceptKeyOf = new Map([...loaded.conceptIds].map(([key, id]) => [id, key]));
+  const mastery: Record<string, MasteryState> = {};
+  for (const row of masteryRows.data) {
+    const key = conceptKeyOf.get(row.concept_id);
+    if (key) mastery[key] = toState(row);
+  }
+
+  return { byLesson, lastVisited, answered, mastery, credit };
 });
 
 export type ContinuePoint = { courseId: string; lessonKey: string; lessonTitle: string };
