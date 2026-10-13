@@ -312,6 +312,10 @@ body {
 .prose-chat .katex-display { margin: 0.5em 0; }
 
 /* The lesson part a tutor link points at. */
+/* Drawn outside the part with clear space around it (the gap is softly tinted). */
 [data-block-id].tutor-highlight {
-  box-shadow: 0 0 0 2px var(--accent), 0 0 0 8px color-mix(in srgb, var(--accent) 16%, transparent);
+  outline: 2px solid var(--accent);
+  outline-offset: 12px;
+  border-radius: 16px;
+  box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 7%, transparent);
 }

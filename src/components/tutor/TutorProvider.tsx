@@ -49,14 +49,19 @@ export const useTutor = () => {
   return value;
 };
 
-/** The block at the top of the reader's screen: what "this" most likely refers to. */
+/** Where "where you're reading" is measured: this far down the lesson's visible area. */
+const READING_LINE = 0.35;
+
+/** The part of the lesson at the reading line: what "this" most likely refers to. */
 export function blockInView(): string | null {
   const container = document.getElementById(LESSON_SCROLL_ID);
   if (!container) return null;
-  const top = container.getBoundingClientRect().top;
+  const view = container.getBoundingClientRect();
+  const line = view.top + view.height * READING_LINE;
   const blocks = [...container.querySelectorAll<HTMLElement>("[data-block-id]")];
-  const visible = blocks.find((b) => b.getBoundingClientRect().bottom > top + 80);
-  return visible?.dataset.blockId ?? null;
+  // The part crossing the line, or else the first one below it (the line can fall in a gap).
+  const visible = blocks.find((b) => b.getBoundingClientRect().bottom > line);
+  return visible?.dataset.blockId ?? blocks.at(-1)?.dataset.blockId ?? null;
 }
 
 let localId = 0;

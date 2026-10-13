@@ -43,7 +43,7 @@ export function ConnectorOverlay() {
       setLine({
         x1: chip.left - 4,
         y1: chip.top + chip.height / 2,
-        x2: Math.min(b.right, view.right) + 6,
+        x2: Math.min(b.right + 14, view.right - 2), // the ring sits 12px outside the part
         y2,
         offscreen: y2 !== midY && (b.bottom < view.top || b.top > view.bottom),
       });
