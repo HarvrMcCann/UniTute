@@ -17,9 +17,9 @@ const findChip = (chipId: string) =>
  * ringed. If the part is scrolled out of view, the line points to the lesson's edge.
  */
 export function ConnectorOverlay() {
-  const { activeAnchor, draft, inputFocused } = useTutor();
+  const { activeAnchor, linkTarget, inputFocused } = useTutor();
   const [line, setLine] = useState<Line | null>(null);
-  const anchor = activeAnchor ?? (inputFocused && draft.blockId ? { blockId: draft.blockId, chipId: DRAFT_CHIP_ID } : null);
+  const anchor = activeAnchor ?? (inputFocused && linkTarget ? { blockId: linkTarget, chipId: DRAFT_CHIP_ID } : null);
   const blockId = anchor?.blockId;
   const chipId = anchor?.chipId;
 

@@ -21,6 +21,21 @@ const TABLET_UP = "(min-width: 768px)"; // md: tutor is a side panel, not a shee
 
 const matches = (query: string) => window.matchMedia(query).matches;
 
+// The tutor panel can be dragged wider or narrower; its width is remembered per browser.
+const TUTOR_WIDTH_KEY = "unitute-tutor-width";
+const TUTOR_MIN = 300;
+const tutorMax = () => Math.max(TUTOR_MIN, Math.min(720, Math.round(window.innerWidth * 0.5)));
+const clampTutor = (w: number) => Math.round(Math.min(tutorMax(), Math.max(TUTOR_MIN, w)));
+
+function savedTutorWidth(): number | null {
+  try {
+    const w = Number(localStorage.getItem(TUTOR_WIDTH_KEY));
+    return Number.isFinite(w) && w > 0 ? clampTutor(w) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Tutor side panel state. "auto" = open on desktop, closed on tablet, which CSS handles
  * so the server render needs no screen size. Phones always use the bottom sheet instead.
@@ -50,7 +65,58 @@ export function ClassroomShell({ outline, account, owner, children }: ClassroomS
   const [navCollapsed, setNavCollapsed] = useState(false); // desktop column
   const [drawerOpen, setDrawerOpen] = useState(false); // tablet + phone
   const [tutorMode, setTutorMode] = useState<TutorPanelMode>("auto"); // tablet + desktop
-  const [tutorWidth, setTutorWidth] = useState(380); // px, set when opened (380 desktop, 340 tablet)
+  const [tutorWidth, setTutorWidth] = useState(380); // px: remembered width, else 380 desktop / 340 tablet
+  const [resizing, setResizing] = useState(false);
+
+  // Restore the remembered width after mount (the server render uses the default).
+  useEffect(() => {
+    const saved = savedTutorWidth();
+    if (saved) setTutorWidth(saved); // eslint-disable-line react-hooks/set-state-in-effect -- browser-only preference
+  }, []);
+
+  const defaultTutorWidth = () => savedTutorWidth() ?? (matches(DESKTOP) ? 380 : 340);
+
+  function rememberTutorWidth(width: number) {
+    try {
+      localStorage.setItem(TUTOR_WIDTH_KEY, String(width));
+    } catch {
+      // storage blocked: the width still applies for this visit
+    }
+  }
+
+  /** Drag the panel's left edge: moving left makes it wider. */
+  function startResize(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = tutorWidth;
+    let width = startWidth;
+    setResizing(true);
+    const move = (ev: PointerEvent) => {
+      width = clampTutor(startWidth + (startX - ev.clientX));
+      setTutorWidth(width);
+    };
+    const up = () => {
+      setResizing(false);
+      rememberTutorWidth(width);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      document.body.style.removeProperty("cursor");
+      document.body.style.removeProperty("user-select");
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  }
+
+  function resizeBy(delta: number) {
+    const width = clampTutor(tutorWidth + delta);
+    setTutorWidth(width);
+    rememberTutorWidth(width);
+  }
   const [sheetOpen, setSheetOpen] = useState(false); // phone
   const [sheetExpanded, setSheetExpanded] = useState(false); // phone: half height or nearly full
 
@@ -79,7 +145,7 @@ export function ClassroomShell({ outline, account, owner, children }: ClassroomS
       return;
     }
     const isOpen = tutorMode === "open" || (tutorMode === "auto" && matches(DESKTOP));
-    if (!isOpen) setTutorWidth(matches(DESKTOP) ? 380 : 340);
+    if (!isOpen) setTutorWidth(defaultTutorWidth());
     setTutorMode(isOpen ? "closed" : "open");
   }
 
@@ -91,7 +157,7 @@ export function ClassroomShell({ outline, account, owner, children }: ClassroomS
     }
     const isOpen = tutorMode === "open" || (tutorMode === "auto" && matches(DESKTOP));
     if (!isOpen) {
-      setTutorWidth(matches(DESKTOP) ? 380 : 340);
+      setTutorWidth(defaultTutorWidth());
       setTutorMode("open");
     }
   }, [tutorMode]);
@@ -171,9 +237,31 @@ export function ClassroomShell({ outline, account, owner, children }: ClassroomS
                 initial={{ width: 0, opacity: 0 }}
                 animate={{ width: tutorWidth, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className={`shrink-0 flex-col overflow-hidden print:!hidden ${panel} ${TUTOR_PANEL_CLASSES[tutorMode]}`}
+                transition={resizing ? { duration: 0 } : { duration: 0.25, ease: "easeOut" }}
+                className={`relative shrink-0 flex-col overflow-hidden print:!hidden ${panel} ${TUTOR_PANEL_CLASSES[tutorMode]}`}
               >
+                {/* Resize handle: drag the left edge (or focus it and use the arrow keys). Double-click resets. */}
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize tutor"
+                  aria-valuenow={tutorWidth}
+                  aria-valuemin={TUTOR_MIN}
+                  tabIndex={0}
+                  onPointerDown={startResize}
+                  onDoubleClick={() => resizeBy(380 - tutorWidth)}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowLeft") resizeBy(20);
+                    else if (e.key === "ArrowRight") resizeBy(-20);
+                    else return;
+                    e.preventDefault();
+                  }}
+                  className={`group absolute inset-y-0 left-0 z-10 flex w-2.5 cursor-col-resize items-center justify-center outline-none`}
+                >
+                  <span
+                    className={`h-10 w-1 rounded-full transition-colors group-hover:bg-accent/60 group-focus-visible:bg-accent ${resizing ? "bg-accent" : "bg-transparent"}`}
+                  />
+                </div>
                 <div className="flex h-full flex-col" style={{ width: tutorWidth }}>
                   <TutorPanel courseId={outline.id} lessonTitle={lessonTitle} onClose={closeTutor} />
                 </div>

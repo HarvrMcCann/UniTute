@@ -149,3 +149,18 @@ export const FlagIcon = (p: IconProps) => (
     <path d="M5 21V4m0 0h11l-2 4 2 4H5" />
   </Svg>
 );
+
+export const LinkIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M10 13.5a4 4 0 0 0 5.7.3l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.4 1.4" />
+    <path d="M14 10.5a4 4 0 0 0-5.7-.3L5.5 13a4 4 0 0 0 5.7 5.7l1.4-1.4" />
+  </Svg>
+);
+
+export const UnlinkIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m17.5 13.2 1-1a4 4 0 0 0-5.7-5.7l-1 1" />
+    <path d="m6.5 10.8-1 1a4 4 0 0 0 5.7 5.7l1-1" />
+    <path d="M8 2v3M2 8h3M16 22v-3M22 16h-3" />
+  </Svg>
+);

@@ -25,6 +25,11 @@ type TutorContextValue = {
   /** What the next question will be linked to: follows the reader unless pinned (by highlighting text, or clearing it). */
   draft: DraftAnchor;
   setDraft: (draft: DraftAnchor) => void;
+  /** Whether questions link to where you're reading (the chain toggle). Highlighted text always links. */
+  linking: boolean;
+  setLinking: (on: boolean) => void;
+  /** The part the next question will actually be linked to, after the toggle (null = none). */
+  linkTarget: string | null;
   /** The message box has focus (desktop shows the line to the draft anchor). */
   inputFocused: boolean;
   setInputFocused: (focused: boolean) => void;
@@ -38,7 +43,9 @@ export type ActiveAnchor = { blockId: string; chipId: string };
 export type DraftAnchor = { blockId: string | null; quote: string | null; pinned: boolean };
 const FOLLOWING: DraftAnchor = { blockId: null, quote: null, pinned: false };
 
-/** Chip id of the "linked to" preview above the message box. */
+const LINKING_KEY = "unitute-tutor-linking";
+
+/** Chip id of the message box, which the desktop line runs from while you type. */
 export const DRAFT_CHIP_ID = "draft-anchor";
 
 const TutorContext = createContext<TutorContextValue | null>(null);
@@ -82,6 +89,25 @@ export function TutorProvider({ courseId, lessonKey, onOpen, children }: TutorPr
   const [needsCredit, setNeedsCredit] = useState(false);
   const [activeAnchor, setActiveAnchor] = useState<ActiveAnchor | null>(null);
   const [draft, setDraft] = useState<DraftAnchor>(FOLLOWING);
+  const [linking, setLinkingState] = useState(true);
+  const linkTarget = draft.quote ? draft.blockId : linking ? draft.blockId : null;
+
+  // Remembered per browser (read after mount so the server render matches).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(LINKING_KEY) === "off") setLinkingState(false); // eslint-disable-line react-hooks/set-state-in-effect -- browser-only preference
+    } catch {
+      // storage blocked: default on
+    }
+  }, []);
+  const setLinking = useCallback((on: boolean) => {
+    setLinkingState(on);
+    try {
+      localStorage.setItem(LINKING_KEY, on ? "on" : "off");
+    } catch {
+      // storage blocked: still works for this visit
+    }
+  }, []);
   const [inputFocused, setInputFocused] = useState(false);
   const [focusRequest, setFocusRequest] = useState(0);
   const requested = useRef(false);
@@ -131,9 +157,9 @@ export function TutorProvider({ courseId, lessonKey, onOpen, children }: TutorPr
       setError(null);
       setStatus("sending");
       const replyId = `local-${++localId}`;
-      const anchorBlockId = draft.pinned ? draft.blockId : (draft.blockId ?? blockInView());
       const quote = draft.pinned ? draft.quote : null;
-      setDraft(FOLLOWING);
+      const anchorBlockId = quote ? draft.blockId : linking ? (draft.blockId ?? blockInView()) : null;
+      setDraft({ blockId: blockInView(), quote: null, pinned: false });
       setMessages((m) => [
         ...m,
         { id: `local-${++localId}`, role: "user", content: withQuote(message, quote), lessonKey, anchorBlockId },
@@ -180,7 +206,7 @@ export function TutorProvider({ courseId, lessonKey, onOpen, children }: TutorPr
         setStatus("ready");
       }
     },
-    [courseId, lessonKey, status, setCredit, draft],
+    [courseId, lessonKey, status, setCredit, draft, linking],
   );
 
   const value = useMemo(
@@ -195,12 +221,15 @@ export function TutorProvider({ courseId, lessonKey, onOpen, children }: TutorPr
       setActiveAnchor,
       draft,
       setDraft,
+      linking,
+      setLinking,
+      linkTarget,
       inputFocused,
       setInputFocused,
       openAndFocus,
       focusRequest,
     }),
-    [messages, status, error, needsCredit, loadHistory, send, activeAnchor, draft, inputFocused, openAndFocus, focusRequest],
+    [messages, status, error, needsCredit, loadHistory, send, activeAnchor, draft, linking, setLinking, linkTarget, inputFocused, openAndFocus, focusRequest],
   );
   return <TutorContext.Provider value={value}>{children}</TutorContext.Provider>;
 }

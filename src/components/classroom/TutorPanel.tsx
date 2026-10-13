@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnchorChip } from "@/components/tutor/AnchorChip";
 import { blockInView, DRAFT_CHIP_ID, useTutor } from "@/components/tutor/TutorProvider";
 import { IconButton } from "@/components/ui/IconButton";
-import { CloseIcon, SendIcon, SparkIcon } from "@/components/ui/icons";
+import { CloseIcon, LinkIcon, SendIcon, SparkIcon, UnlinkIcon } from "@/components/ui/icons";
 import { formatCredit, MIN_CREDIT_USD } from "@/lib/credits";
 import { splitQuote } from "@/lib/tutor/protocol";
 import { useProgress } from "./ProgressContext";
@@ -28,7 +28,7 @@ type TutorPanelProps = {
 /** Tutor chat (Claude Haiku) about the current lesson, aware of the student's knowledge level. */
 export function TutorPanel({ courseId, lessonTitle, onClose }: TutorPanelProps) {
   const { userId, credit } = useProgress();
-  const { messages, status, error, needsCredit, loadHistory, send, setInputFocused, focusRequest } = useTutor();
+  const { messages, status, error, needsCredit, loadHistory, send, setInputFocused, focusRequest, linking, setLinking, draft: anchorDraft } = useTutor();
   const pathname = usePathname();
   const [draft, setDraft] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
@@ -111,8 +111,26 @@ export function TutorPanel({ courseId, lessonTitle, onClose }: TutorPanelProps) 
         {/* On desktop, while you type, a line runs from this box to the part of the lesson the question is about. */}
         <div
           data-chip-id={DRAFT_CHIP_ID}
-          className={`flex items-end gap-2 rounded-xl border border-line bg-code px-3 py-2 transition-shadow focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25 ${canChat ? "" : "opacity-60"}`}
+          className={`flex items-end gap-1.5 rounded-xl border border-line bg-code py-2 pl-1.5 pr-3 transition-shadow focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25 ${canChat ? "" : "opacity-60"}`}
         >
+          <IconButton
+            label={
+              anchorDraft.quote
+                ? "Linked to the text you highlighted"
+                : linking
+                  ? "Linking questions to where you're reading (click to stop)"
+                  : "Not linking questions to the lesson (click to link)"
+            }
+            aria-pressed={linking}
+            active={linking || Boolean(anchorDraft.quote)}
+            disabled={!canChat || Boolean(anchorDraft.quote)}
+            size="sm"
+            // Keep focus in the box so the line to the lesson stays visible.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setLinking(!linking)}
+          >
+            {linking || anchorDraft.quote ? <LinkIcon className="size-4" /> : <UnlinkIcon className="size-4" />}
+          </IconButton>
           <textarea
             ref={input}
             onFocus={() => setInputFocused(true)}
