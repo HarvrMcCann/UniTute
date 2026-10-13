@@ -4,11 +4,12 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { AnchorChip } from "@/components/tutor/AnchorChip";
-import { useTutor } from "@/components/tutor/TutorProvider";
+import { AnchorChip, flashBlock } from "@/components/tutor/AnchorChip";
+import { blockInView, DRAFT_CHIP_ID, useTutor } from "@/components/tutor/TutorProvider";
 import { IconButton } from "@/components/ui/IconButton";
 import { CloseIcon, SendIcon, SparkIcon } from "@/components/ui/icons";
 import { formatCredit, MIN_CREDIT_USD } from "@/lib/credits";
+import { splitQuote } from "@/lib/tutor/protocol";
 import { useProgress } from "./ProgressContext";
 
 // Markdown + KaTeX for replies only loads once the tutor is used.
@@ -27,15 +28,22 @@ type TutorPanelProps = {
 /** Tutor chat (Claude Haiku) about the current lesson, aware of the student's knowledge level. */
 export function TutorPanel({ courseId, lessonTitle, onClose }: TutorPanelProps) {
   const { userId, credit } = useProgress();
-  const { messages, status, error, needsCredit, loadHistory, send } = useTutor();
+  const { messages, status, error, needsCredit, loadHistory, send, setInputFocused, focusRequest } = useTutor();
   const pathname = usePathname();
   const [draft, setDraft] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
   const sending = status === "sending";
   const outOfCredit = needsCredit || credit < MIN_CREDIT_USD;
   const canChat = Boolean(userId && lessonTitle && !outOfCredit);
 
   useEffect(loadHistory, [loadHistory]);
+
+  // "Ask tutor" on highlighted text: focus this box if it's the one on screen.
+  useEffect(() => {
+    const el = input.current;
+    if (el && Date.now() - focusRequest < 1500 && el.getClientRects().length > 0) el.focus();
+  }, [focusRequest]);
 
   // Keep the newest message in view as replies stream in.
   const last = messages.at(-1);
@@ -74,16 +82,13 @@ export function TutorPanel({ courseId, lessonTitle, onClose }: TutorPanelProps) 
             {messages.map((m) =>
               m.role === "user" ? (
                 <li key={m.id} className="ml-8 flex flex-col items-end gap-1">
-                  <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-soft px-3.5 py-2 text-[0.9375rem]">{m.content}</p>
+                  <UserMessage content={m.content} />
                   {m.anchorBlockId && <AnchorChip courseId={courseId} blockId={m.anchorBlockId} lessonKey={m.lessonKey} prefix="About" />}
                 </li>
               ) : (
                 <li key={m.id} className="mr-2">
                   {m.content ? (
-                    <ChatMarkdown
-                      text={m.content}
-                      renderAnchor={(blockId) => <AnchorChip key={blockId} courseId={courseId} blockId={blockId} lessonKey={m.lessonKey} />}
-                    />
+                    <ChatMarkdown text={m.content} />
                   ) : (
                     <TypingDots />
                   )}
@@ -102,8 +107,14 @@ export function TutorPanel({ courseId, lessonTitle, onClose }: TutorPanelProps) 
           submit();
         }}
       >
-        <div className={`flex items-end gap-2 rounded-xl border border-line bg-code px-3 py-2 ${canChat ? "" : "opacity-60"}`}>
+        {canChat && <DraftAnchorRow />}
+        <div
+          className={`flex items-end gap-2 rounded-xl border border-line bg-code px-3 py-2 transition-shadow focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25 ${canChat ? "" : "opacity-60"}`}
+        >
           <textarea
+            ref={input}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -117,7 +128,7 @@ export function TutorPanel({ courseId, lessonTitle, onClose }: TutorPanelProps) 
             maxLength={2000}
             aria-label="Message the tutor"
             placeholder={lessonTitle ? "Ask about this lesson…" : "Open a lesson to ask about it"}
-            className="field-sizing-content max-h-32 min-h-9 flex-1 resize-none bg-transparent py-1.5 text-base outline-none placeholder:text-faint"
+            className="field-sizing-content max-h-32 min-h-9 flex-1 resize-none bg-transparent py-1.5 text-base outline-none placeholder:text-faint focus-visible:outline-none"
           />
           <IconButton label="Send" type="submit" disabled={!canChat || sending || !draft.trim()} size="sm">
             <SendIcon className="size-4" />
@@ -129,6 +140,70 @@ export function TutorPanel({ courseId, lessonTitle, onClose }: TutorPanelProps) 
           </p>
         )}
       </form>
+    </div>
+  );
+}
+
+/** A question, with the text it's about quoted above it when asked from a highlight. */
+function UserMessage({ content }: { content: string }) {
+  const { quote, text } = splitQuote(content);
+  return (
+    <div className="rounded-2xl rounded-br-md bg-accent-soft px-3.5 py-2 text-[0.9375rem]">
+      {quote && <p className="mb-1.5 line-clamp-3 border-l-2 border-accent/50 pl-2 text-sm italic text-muted">{quote}</p>}
+      <p className="whitespace-pre-wrap">{text}</p>
+    </div>
+  );
+}
+
+/**
+ * What the next question will be linked to. It follows the part at the top of the screen as you
+ * read, unless you highlighted text ("Ask tutor") or unlinked it.
+ */
+function DraftAnchorRow() {
+  const { draft, setDraft } = useTutor();
+  // Rendered only in the browser after the lesson is on screen (draft starts empty on the server).
+  const target = draft.blockId ? document.getElementById(draft.blockId) : null;
+
+  if (!target) {
+    return (
+      <p className="mb-2 flex items-center gap-2 px-1 text-xs text-faint">
+        Not linked to a part of the lesson
+        {draft.pinned && (
+          <button type="button" onClick={() => setDraft({ blockId: blockInView(), quote: null, pinned: false })} className="text-accent hover:underline">
+            Link to what I&rsquo;m reading
+          </button>
+        )}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mb-2 flex items-start gap-1.5 px-1 text-xs">
+      <span className="shrink-0 pt-0.5 text-faint">Linked to</span>
+      <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          data-chip-id={DRAFT_CHIP_ID}
+          onClick={() => {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+            flashBlock(target);
+          }}
+          className="inline-flex max-w-full items-center gap-1 rounded-full border border-accent/40 bg-accent-soft px-2 py-0.5 font-medium text-accent hover:border-accent"
+        >
+          <span aria-hidden>↗</span>
+          <span className="truncate">{target.dataset.blockLabel ?? "this part"}</span>
+        </button>
+        {draft.quote && <p className="mt-1 line-clamp-2 border-l-2 border-accent/50 pl-2 italic text-muted">{draft.quote}</p>}
+      </div>
+      <button
+        type="button"
+        aria-label="Don't link this question"
+        title="Don't link this question"
+        onClick={() => setDraft({ blockId: null, quote: null, pinned: true })}
+        className="grid size-5 shrink-0 place-items-center rounded-full text-faint hover:bg-hover hover:text-text"
+      >
+        ×
+      </button>
     </div>
   );
 }

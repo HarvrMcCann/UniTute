@@ -4,33 +4,31 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import { rehypeLooseMath } from "@/lib/looseMath";
 
-const ANCHOR_HREF = "#tutor-anchor-";
+const components: Components = {
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  ),
+  table: ({ children }) => (
+    <div className="table-scroll">
+      <table>{children}</table>
+    </div>
+  ),
+};
 
 /**
  * A tutor reply: markdown with KaTeX maths, rendered in the browser (replies arrive live).
- * [[b-...]] references become link chips via renderAnchor. Loaded lazily with the tutor.
+ * Loaded lazily with the tutor. Each exchange is linked to the lesson through its question, so any
+ * part IDs the tutor writes ([[b-...]], from older replies) are dropped.
  */
-export default function ChatMarkdown({ text, renderAnchor }: { text: string; renderAnchor: (blockId: string) => React.ReactNode }) {
-  const source = text.replace(/\[\[(b-[\w-]+)\]\]/g, (_, id: string) => ` [link](${ANCHOR_HREF}${id})`);
-  const components: Components = {
-    a: ({ href, children }) =>
-      href?.startsWith(ANCHOR_HREF) ? (
-        renderAnchor(href.slice(ANCHOR_HREF.length))
-      ) : (
-        <a href={href} target="_blank" rel="noopener noreferrer">
-          {children}
-        </a>
-      ),
-    table: ({ children }) => (
-      <div className="table-scroll">
-        <table>{children}</table>
-      </div>
-    ),
-  };
+export default function ChatMarkdown({ text }: { text: string }) {
+  const source = text.replace(/\s?\[\[?b-[\w-]+\]\]?/g, "");
   return (
     <div className="prose-lesson prose-chat">
-      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex, rehypeLooseMath]} components={components}>
         {source}
       </ReactMarkdown>
     </div>

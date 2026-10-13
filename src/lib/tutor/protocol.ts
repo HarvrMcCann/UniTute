@@ -14,3 +14,14 @@ export type ChatMessage = {
   lessonKey: string | null;
   anchorBlockId: string | null;
 };
+
+/** A question about highlighted text is stored with the text quoted above it. */
+export const withQuote = (message: string, quote: string | null) =>
+  quote ? `${quote.split("\n").map((line) => `> ${line}`).join("\n")}\n\n${message}` : message;
+
+/** Splits a stored question back into its quote (if any) and the question. */
+export function splitQuote(content: string): { quote: string | null; text: string } {
+  const match = content.match(/^((?:> .*(?:\n|$))+)\n?([\s\S]*)$/);
+  if (!match) return { quote: null, text: content };
+  return { quote: match[1].replace(/^> /gm, "").trim(), text: match[2] };
+}

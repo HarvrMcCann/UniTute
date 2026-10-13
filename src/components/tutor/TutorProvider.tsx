@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getTutorHistory } from "@/app/actions";
 import { useProgress } from "@/components/classroom/ProgressContext";
 import { LESSON_SCROLL_ID } from "@/components/classroom/ProgressTracker";
-import { TUTOR_STREAM_END, type ChatMessage, type TutorStreamEnd } from "@/lib/tutor/protocol";
+import { TUTOR_STREAM_END, withQuote, type ChatMessage, type TutorStreamEnd } from "@/lib/tutor/protocol";
 
 /*
  * Tutor chat state. The side panel (tablet/desktop) and bottom sheet (phone) both show it, so it
@@ -19,10 +19,27 @@ type TutorContextValue = {
   needsCredit: boolean;
   loadHistory: () => void;
   send: (text: string) => void;
-  /** The tutor link being hovered (desktop draws a line from it to the lesson). */
-  activeAnchor: { blockId: string; chip: HTMLElement } | null;
-  setActiveAnchor: (anchor: { blockId: string; chip: HTMLElement } | null) => void;
+  /** The tutor link being hovered (desktop draws a line from it to the lesson). Chips are found by data-chip-id. */
+  activeAnchor: ActiveAnchor | null;
+  setActiveAnchor: (anchor: ActiveAnchor | null) => void;
+  /** What the next question will be linked to: follows the reader unless pinned (by highlighting text, or clearing it). */
+  draft: DraftAnchor;
+  setDraft: (draft: DraftAnchor) => void;
+  /** The message box has focus (desktop shows the line to the draft anchor). */
+  inputFocused: boolean;
+  setInputFocused: (focused: boolean) => void;
+  /** Opens the tutor and focuses the message box (e.g. after "Ask tutor" on highlighted text). */
+  openAndFocus: () => void;
+  /** When focus was last requested (ms); panels focus their box if it was just now. */
+  focusRequest: number;
 };
+
+export type ActiveAnchor = { blockId: string; chipId: string };
+export type DraftAnchor = { blockId: string | null; quote: string | null; pinned: boolean };
+const FOLLOWING: DraftAnchor = { blockId: null, quote: null, pinned: false };
+
+/** Chip id of the "linked to" preview above the message box. */
+export const DRAFT_CHIP_ID = "draft-anchor";
 
 const TutorContext = createContext<TutorContextValue | null>(null);
 
@@ -33,7 +50,7 @@ export const useTutor = () => {
 };
 
 /** The block at the top of the reader's screen: what "this" most likely refers to. */
-function blockInView(): string | null {
+export function blockInView(): string | null {
   const container = document.getElementById(LESSON_SCROLL_ID);
   if (!container) return null;
   const top = container.getBoundingClientRect().top;
@@ -44,14 +61,53 @@ function blockInView(): string | null {
 
 let localId = 0;
 
-export function TutorProvider({ courseId, lessonKey, children }: { courseId: string; lessonKey: string | undefined; children: React.ReactNode }) {
+type TutorProviderProps = {
+  courseId: string;
+  lessonKey: string | undefined;
+  /** Opens the tutor panel or sheet (owned by the classroom shell). */
+  onOpen: () => void;
+  children: React.ReactNode;
+};
+
+export function TutorProvider({ courseId, lessonKey, onOpen, children }: TutorProviderProps) {
   const { userId, setCredit } = useProgress();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState<TutorContextValue["status"]>("idle");
   const [error, setError] = useState<string | null>(null);
   const [needsCredit, setNeedsCredit] = useState(false);
-  const [activeAnchor, setActiveAnchor] = useState<TutorContextValue["activeAnchor"]>(null);
+  const [activeAnchor, setActiveAnchor] = useState<ActiveAnchor | null>(null);
+  const [draft, setDraft] = useState<DraftAnchor>(FOLLOWING);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [focusRequest, setFocusRequest] = useState(0);
   const requested = useRef(false);
+
+  const openAndFocus = useCallback(() => {
+    onOpen();
+    setFocusRequest(Date.now());
+  }, [onOpen]);
+
+  // Follow the reader: the draft anchor is the part at the top of the screen, until pinned.
+  // A new lesson starts following again.
+  useEffect(() => {
+    setDraft(FOLLOWING); // eslint-disable-line react-hooks/set-state-in-effect -- reset when the lesson changes
+    const container = document.getElementById(LESSON_SCROLL_ID);
+    if (!container || !lessonKey) return;
+    let frame = 0;
+    const follow = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const blockId = blockInView();
+        setDraft((d) => (d.pinned || d.blockId === blockId ? d : { blockId, quote: null, pinned: false }));
+      });
+    };
+    const settle = setTimeout(follow, 400); // after the lesson has rendered and restored its position
+    container.addEventListener("scroll", follow, { passive: true });
+    return () => {
+      clearTimeout(settle);
+      cancelAnimationFrame(frame);
+      container.removeEventListener("scroll", follow);
+    };
+  }, [lessonKey]);
 
   const loadHistory = useCallback(() => {
     if (requested.current || !userId) return;
@@ -70,10 +126,12 @@ export function TutorProvider({ courseId, lessonKey, children }: { courseId: str
       setError(null);
       setStatus("sending");
       const replyId = `local-${++localId}`;
-      const anchorBlockId = blockInView();
+      const anchorBlockId = draft.pinned ? draft.blockId : (draft.blockId ?? blockInView());
+      const quote = draft.pinned ? draft.quote : null;
+      setDraft(FOLLOWING);
       setMessages((m) => [
         ...m,
-        { id: `local-${++localId}`, role: "user", content: message, lessonKey, anchorBlockId },
+        { id: `local-${++localId}`, role: "user", content: withQuote(message, quote), lessonKey, anchorBlockId },
         { id: replyId, role: "assistant", content: "", lessonKey, anchorBlockId: null },
       ]);
       const setReply = (content: string) => setMessages((m) => m.map((x) => (x.id === replyId ? { ...x, content } : x)));
@@ -83,7 +141,7 @@ export function TutorProvider({ courseId, lessonKey, children }: { courseId: str
         const response = await fetch("/api/tutor", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseId, lessonKey, message, anchorBlockId }),
+          body: JSON.stringify({ courseId, lessonKey, message, anchorBlockId, quote }),
         });
         if (!response.ok || !response.body) {
           const body = (await response.json().catch(() => null)) as { error?: string; needsCredit?: boolean } | null;
@@ -117,12 +175,27 @@ export function TutorProvider({ courseId, lessonKey, children }: { courseId: str
         setStatus("ready");
       }
     },
-    [courseId, lessonKey, status, setCredit],
+    [courseId, lessonKey, status, setCredit, draft],
   );
 
   const value = useMemo(
-    () => ({ messages, status, error, needsCredit, loadHistory, send, activeAnchor, setActiveAnchor }),
-    [messages, status, error, needsCredit, loadHistory, send, activeAnchor],
+    () => ({
+      messages,
+      status,
+      error,
+      needsCredit,
+      loadHistory,
+      send,
+      activeAnchor,
+      setActiveAnchor,
+      draft,
+      setDraft,
+      inputFocused,
+      setInputFocused,
+      openAndFocus,
+      focusRequest,
+    }),
+    [messages, status, error, needsCredit, loadHistory, send, activeAnchor, draft, inputFocused, openAndFocus, focusRequest],
   );
   return <TutorContext.Provider value={value}>{children}</TutorContext.Provider>;
 }

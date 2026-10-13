@@ -2,6 +2,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import { rehypeLooseMath } from "@/lib/looseMath";
 
 const blockComponents: Components = {
   table: ({ children }) => (
@@ -29,7 +30,7 @@ export function Markdown({ children, inline = false, className }: MarkdownProps)
   const content = (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex]}
+      rehypePlugins={[rehypeKatex, rehypeLooseMath]}
       components={inline ? inlineComponents : blockComponents}
     >
       {children}

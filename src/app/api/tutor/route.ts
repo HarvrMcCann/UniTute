@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { blockLabel, courseMap, knowledgeLevel, lessonContext } from "@/lib/tutor/context";
 import { HISTORY_MESSAGES, MAX_MESSAGE_CHARS, streamTutorReply, tutorMessages, tutorSystem, type TutorTurn } from "@/lib/tutor/tutor";
-import { TUTOR_STREAM_END, type TutorStreamEnd } from "@/lib/tutor/protocol";
+import { TUTOR_STREAM_END, withQuote, type TutorStreamEnd } from "@/lib/tutor/protocol";
 
 // A reply usually streams in 3-15s; this is headroom.
 export const maxDuration = 60;
@@ -56,14 +56,22 @@ export async function POST(request: Request) {
 
   const questions = new Map(lesson.questions.map((q) => [q.id, q]));
   const anchor = lesson.blocks.find((b) => b.id === body.anchorBlockId) ?? null;
-  const studentContext = `${anchor ? `They're looking at [${anchor.id}] ${blockLabel(anchor, questions)}.\n\n` : ""}${knowledgeLevel(course, lesson, progress.mastery)}`;
+  // Text the student highlighted in that part, if they asked about a selection.
+  const quote = anchor && typeof body.quote === "string" && body.quote.trim() ? body.quote.trim().slice(0, 600) : null;
+  const studentContext = [
+    anchor ? `They're asking about [${anchor.id}] ${blockLabel(anchor, questions)}.` : null,
+    quote ? `They highlighted this text in it: "${quote}"` : null,
+    knowledgeLevel(course, lesson, progress.mastery),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const { error: saveError } = await supabase.from("tutor_messages").insert({
     user_id: user.id,
     course_id: courseId,
     lesson_key: lesson.id,
     role: "user",
-    content: question,
+    content: withQuote(question, quote),
     anchor_block_id: anchor?.id ?? null,
   });
   if (saveError) return fail(500, "Couldn't send that. Try again.");

@@ -2,29 +2,40 @@
 
 import { useEffect, useState } from "react";
 import { LESSON_SCROLL_ID } from "@/components/classroom/ProgressTracker";
-import { useTutor } from "./TutorProvider";
+import { DRAFT_CHIP_ID, useTutor } from "./TutorProvider";
 
 const DESKTOP = "(min-width: 1024px)";
 type Line = { x1: number; y1: number; x2: number; y2: number; offscreen: boolean };
 
+/** The visible copy of a chip (the tutor is mounted twice: side panel and phone sheet). */
+const findChip = (chipId: string) =>
+  [...document.querySelectorAll<HTMLElement>(`[data-chip-id="${CSS.escape(chipId)}"]`)].find((el) => el.getClientRects().length > 0);
+
 /**
- * Desktop: while a tutor link is hovered, a curved line runs from it to the lesson part it means,
- * and that part is ringed. If the part is scrolled out of view, the line points to the lesson's edge.
+ * Desktop: while a tutor link is hovered, or the message box has focus (showing what the question
+ * will link to), a curved line runs from the chip to that part of the lesson, and the part is
+ * ringed. If the part is scrolled out of view, the line points to the lesson's edge.
  */
 export function ConnectorOverlay() {
-  const { activeAnchor } = useTutor();
+  const { activeAnchor, draft, inputFocused } = useTutor();
   const [line, setLine] = useState<Line | null>(null);
+  const anchor = activeAnchor ?? (inputFocused && draft.blockId ? { blockId: draft.blockId, chipId: DRAFT_CHIP_ID } : null);
+  const blockId = anchor?.blockId;
+  const chipId = anchor?.chipId;
 
   useEffect(() => {
-    if (!activeAnchor || !window.matchMedia(DESKTOP).matches) return;
-    const block = document.getElementById(activeAnchor.blockId);
+    if (!blockId || !chipId || !window.matchMedia(DESKTOP).matches) return;
+    const block = document.getElementById(blockId);
     const container = document.getElementById(LESSON_SCROLL_ID);
     if (!block || !container) return;
 
     block.classList.add("tutor-highlight");
     let frame = 0;
     const measure = () => {
-      const chip = activeAnchor.chip.getBoundingClientRect();
+      frame = requestAnimationFrame(measure);
+      const chipEl = findChip(chipId);
+      if (!chipEl) return setLine(null);
+      const chip = chipEl.getBoundingClientRect();
       const b = block.getBoundingClientRect();
       const view = container.getBoundingClientRect();
       const midY = (b.top + b.bottom) / 2;
@@ -36,7 +47,6 @@ export function ConnectorOverlay() {
         y2,
         offscreen: y2 !== midY && (b.bottom < view.top || b.top > view.bottom),
       });
-      frame = requestAnimationFrame(measure);
     };
     measure();
     return () => {
@@ -44,7 +54,7 @@ export function ConnectorOverlay() {
       block.classList.remove("tutor-highlight");
       setLine(null);
     };
-  }, [activeAnchor]);
+  }, [blockId, chipId]);
 
   if (!line) return null;
   const bend = Math.max(40, (line.x1 - line.x2) / 2);

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useReducedMotion } from "motion/react";
+import { useId } from "react";
 import { useTutor } from "./TutorProvider";
 
 const HIGHLIGHT = "tutor-highlight";
@@ -29,6 +30,7 @@ type AnchorChipProps = {
 export function AnchorChip({ courseId, blockId, lessonKey, prefix }: AnchorChipProps) {
   const { lessonId } = useParams<{ lessonId?: string }>();
   const { setActiveAnchor } = useTutor();
+  const chipId = useId();
   const reduceMotion = useReducedMotion();
   // Chips only render in the browser (chat messages load client-side), so the DOM is available.
   const target = lessonKey === lessonId || !lessonKey ? document.getElementById(blockId) : null;
@@ -52,9 +54,10 @@ export function AnchorChip({ courseId, blockId, lessonKey, prefix }: AnchorChipP
         target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
         flashBlock(target);
       }}
-      onMouseEnter={(e) => setActiveAnchor({ blockId, chip: e.currentTarget })}
+      data-chip-id={chipId}
+      onMouseEnter={() => setActiveAnchor({ blockId, chipId })}
       onMouseLeave={() => setActiveAnchor(null)}
-      onFocus={(e) => setActiveAnchor({ blockId, chip: e.currentTarget })}
+      onFocus={() => setActiveAnchor({ blockId, chipId })}
       onBlur={() => setActiveAnchor(null)}
     >
       <span aria-hidden>↗</span>

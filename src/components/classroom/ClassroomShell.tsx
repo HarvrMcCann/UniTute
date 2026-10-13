@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useDragControls } from "motion/react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AccountMenu, type Account } from "@/components/auth/AccountMenu";
 import { IconButton } from "@/components/ui/IconButton";
 import { ChatIcon, CloseIcon, MenuIcon, SidebarIcon } from "@/components/ui/icons";
@@ -11,6 +11,7 @@ import type { CourseOutline } from "@/lib/course/load";
 import { CurriculumNav } from "./CurriculumNav";
 import { LESSON_SCROLL_ID } from "./ProgressTracker";
 import { ConnectorOverlay } from "@/components/tutor/ConnectorOverlay";
+import { SelectionAsk } from "@/components/tutor/SelectionAsk";
 import { TutorProvider } from "@/components/tutor/TutorProvider";
 import { ShareDialog } from "./ShareDialog";
 import { TutorPanel } from "./TutorPanel";
@@ -82,6 +83,19 @@ export function ClassroomShell({ outline, account, owner, children }: ClassroomS
     setTutorMode(isOpen ? "closed" : "open");
   }
 
+  // Open (never toggle closed): used by "Ask tutor" on highlighted text.
+  const openTutor = useCallback(() => {
+    if (!matches(TABLET_UP)) {
+      setSheetOpen(true);
+      return;
+    }
+    const isOpen = tutorMode === "open" || (tutorMode === "auto" && matches(DESKTOP));
+    if (!isOpen) {
+      setTutorWidth(matches(DESKTOP) ? 380 : 340);
+      setTutorMode("open");
+    }
+  }, [tutorMode]);
+
   function closeTutor() {
     setTutorMode("closed");
     setSheetOpen(false);
@@ -89,7 +103,7 @@ export function ClassroomShell({ outline, account, owner, children }: ClassroomS
   }
 
   return (
-    <TutorProvider courseId={outline.id} lessonKey={lessonId}>
+    <TutorProvider courseId={outline.id} lessonKey={lessonId} onOpen={openTutor}>
       <div className="flex h-dvh flex-col print:h-auto">
         {/* Top bar */}
         <header className="flex h-14 shrink-0 items-center gap-1 px-2 sm:px-3 print:hidden">
@@ -247,6 +261,7 @@ export function ClassroomShell({ outline, account, owner, children }: ClassroomS
           )}
         </AnimatePresence>
         <ConnectorOverlay />
+        <SelectionAsk />
       </div>
     </TutorProvider>
   );

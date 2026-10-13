@@ -9,7 +9,32 @@ import { masterySummaryLine, type MasteryState } from "@/lib/mastery";
 const CALLOUT_NAME = { keyIdea: "Key idea", tip: "Tip", warning: "Common mistake", example: "Example" } as const;
 
 const shorten = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
-const plain = (md: string) => md.replace(/\s+/g, " ").trim();
+const SYMBOLS: Record<string, string> = {
+  alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", epsilon: "ε", zeta: "ζ", eta: "η", theta: "θ", lambda: "λ",
+  mu: "μ", xi: "ξ", pi: "π", rho: "ρ", sigma: "σ", Sigma: "Σ", tau: "τ", phi: "φ", varphi: "φ", Phi: "Φ", omega: "ω",
+  Omega: "Ω", infty: "∞", cdot: "·", times: "×", to: "→", rightarrow: "→", Rightarrow: "⇒", le: "≤", leq: "≤", ge: "≥",
+  geq: "≥", approx: "≈", ne: "≠", neq: "≠", pm: "±", angle: "∠", sum: "Σ", int: "∫", partial: "∂", ast: "∗", circ: "∘",
+};
+
+/** LaTeX maths as readable plain text, for labels that can't render KaTeX: \omega_0 -> ω_0, \frac{a}{b} -> a/b. */
+export function plainMath(latex: string): string {
+  return latex
+    .replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, "$1/$2")
+    .replace(/\\(left|right|mathrm|text|operatorname|displaystyle|big|Big)(?![a-zA-Z])/g, "")
+    .replace(/\\[,;:! ]|\\q?quad(?![a-zA-Z])/g, " ")
+    .replace(/\\([a-zA-Z]+)/g, (_, name: string) => SYMBOLS[name] ?? name)
+    .replace(/[{}]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Markdown as one plain line, with $maths$ made readable and emphasis markers dropped. */
+const plain = (md: string) =>
+  md
+    .replace(/\$\$?([^$]+?)\$\$?/g, (_, math: string) => plainMath(math))
+    .replace(/(\*\*|\*|__|`)(.+?)\1/g, "$2")
+    .replace(/\s+/g, " ")
+    .trim();
 
 /** A short human name for a block, used on the tutor's link chips and in bug reports. */
 export function blockLabel(block: Block, questions?: Map<string, Question>): string {
@@ -27,7 +52,7 @@ export function blockLabel(block: Block, questions?: Map<string, Question>): str
     case "code":
       return block.caption ? `Code: ${shorten(plain(block.caption), 44)}` : "Code";
     case "math":
-      return block.caption ? `Equation: ${shorten(plain(block.caption), 44)}` : "Equation";
+      return `Equation: ${shorten(block.caption ? plain(block.caption) : plainMath(block.latex), 44)}`;
     case "summary":
       return "Summary";
     case "check": {

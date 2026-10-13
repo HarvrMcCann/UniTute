@@ -6,6 +6,8 @@
  * two message types (height, error) from its own iframe.
  */
 
+import { LOOSE_MATH_SOURCE, svgLooseMath } from "@/lib/looseMath";
+
 export type WidgetTheme = "dark" | "light";
 
 /** Colours shared with widgets and diagrams; mirrors the app's theme tokens in globals.css. */
@@ -74,13 +76,20 @@ const BRIDGE = `
   var last=0;
   // Measure the content itself: the document's scrollHeight is never less than the frame, so it could only grow.
   var report=function(){if(!document.body)return;var h=Math.ceil(document.body.getBoundingClientRect().height)+2;if(h!==last){last=h;post({type:"height",height:h})}};
-  // Maths in text: UniTute.math(el, "X(e^{jω})") or class="math" turns ^{..} _{..} ^x _x into real super/subscripts.
-  var fmt=function(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/\\^\\{([^}]*)\\}/g,"<sup>$1</sup>").replace(/_\\{([^}]*)\\}/g,"<sub>$1</sub>")
-    .replace(/\\^([A-Za-z0-9+\\u2212\\-\\u0370-\\u03FF])/g,"<sup>$1</sup>").replace(/_([A-Za-z0-9\\u0370-\\u03FF])/g,"<sub>$1</sub>")};
-  window.UniTute={math:function(el,s){el.innerHTML=fmt(s==null?el.textContent:s)}};
+  // Maths written as text ("X(e^{jω})", "ω_c") becomes real super/subscripts in every HTML text
+  // node, including ones the widget's script writes later. Same rule as lib/looseMath.ts.
+  var SRC=${JSON.stringify(LOOSE_MATH_SOURCE)},HAS=new RegExp(SRC,"u");
+  var build=function(text){var f=document.createDocumentFragment(),re=new RegExp(SRC,"gu"),last=0,m;
+    while((m=re.exec(text))){if(m.index>last)f.appendChild(document.createTextNode(text.slice(last,m.index)));
+      var el=document.createElement(m[1]==="^"?"sup":"sub");el.appendChild(build(m[2]!=null?m[2]:m[3]));f.appendChild(el);last=m.index+m[0].length}
+    if(last<text.length)f.appendChild(document.createTextNode(text.slice(last)));return f};
+  var fixText=function(n){var p=n.parentNode;if(!p||!HAS.test(n.nodeValue)||p.namespaceURI!=="http://www.w3.org/1999/xhtml"||/^(SCRIPT|STYLE|TEXTAREA|OPTION|TITLE)$/.test(p.nodeName))return;p.replaceChild(build(n.nodeValue),n)};
+  var scan=function(root){if(root.nodeType===3)return fixText(root);if(root.nodeType!==1)return;var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),list=[],n;while((n=w.nextNode()))list.push(n);list.forEach(fixText)};
+  window.UniTute={math:function(el,s){if(s!=null)el.textContent=s;scan(el)}};
   document.addEventListener("DOMContentLoaded",function(){
-    document.querySelectorAll(".math").forEach(function(el){window.UniTute.math(el)});
+    scan(document.body);
+    new MutationObserver(function(muts){muts.forEach(function(mu){if(mu.type==="characterData")fixText(mu.target);else mu.addedNodes.forEach(scan)})})
+      .observe(document.body,{childList:true,subtree:true,characterData:true});
     new ResizeObserver(report).observe(document.body);
     report();
   });
@@ -103,7 +112,7 @@ export function widgetDocument(html: string, theme: WidgetTheme): string {
 /** Diagram SVGs are shown as <img>; this bakes one theme's colours into a copy. */
 export function themedSvg(svg: string, theme: WidgetTheme): string {
   const style = `<style>svg{${vars(theme)};font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}</style>`;
-  return svg.replace(/^(<svg[^>]*>)/i, `$1${style}`);
+  return svgLooseMath(svg).replace(/^(<svg[^>]*>)/i, `$1${style}`);
 }
 
 export const svgDataUri = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;

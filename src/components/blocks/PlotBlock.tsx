@@ -4,6 +4,23 @@ import { useId, useMemo, useRef, useState } from "react";
 import type { BlockOf } from "@/lib/course/schema";
 import { formatTick, formatValue, logTicks, niceTicks, normalise, samples } from "@/lib/plot/axes";
 import { compile, type Evaluate } from "@/lib/plot/expression";
+import { LooseMathText } from "@/components/ui/LooseMathText";
+import { splitLooseMath, type MathPiece } from "@/lib/looseMath";
+
+/** SVG label text with maths written as text (ω_c, e^{jω}) as real super/subscripts. */
+function svgMath(label: string): React.ReactNode {
+  const render = (pieces: MathPiece[]): React.ReactNode =>
+    pieces.map((p, i) =>
+      typeof p === "string" ? (
+        p
+      ) : (
+        <tspan key={i} baselineShift={p.tag === "sup" ? "super" : "sub"} fontSize="72%">
+          {render(p.children)}
+        </tspan>
+      ),
+    );
+  return render(splitLooseMath(label));
+}
 
 const W = 640;
 const H = 340;
@@ -169,10 +186,10 @@ export function PlotBlock({ spec, labels = {} }: { spec: PlotSpec; labels?: Plot
         {zeroY !== null && <line x1={M.left} x2={M.left + PW} y1={zeroY} y2={zeroY} stroke="var(--text-faint)" />}
         <rect x={M.left} y={M.top} width={PW} height={PH} fill="none" stroke="var(--panel-border)" />
         <text x={M.left + PW / 2} y={H - 6} textAnchor="middle" fontSize="13" fill="var(--text-muted)">
-          {x.label}
+          {svgMath(x.label)}
         </text>
         <text transform={`translate(14 ${M.top + PH / 2}) rotate(-90)`} textAnchor="middle" fontSize="13" fill="var(--text-muted)">
-          {y.label}
+          {svgMath(y.label)}
         </text>
 
         {/* Data */}
@@ -199,7 +216,7 @@ export function PlotBlock({ spec, labels = {} }: { spec: PlotSpec; labels?: Plot
         {readout ? (
           <>
             <span className="text-muted">
-              {x.label.split(" (")[0]} = {formatValue(hoverX!)}
+              <LooseMathText>{x.label.split(" (")[0]}</LooseMathText> = {formatValue(hoverX!)}
             </span>
             {readout.map((r) => (
               <span key={r.key} style={{ color: r.colour }}>
