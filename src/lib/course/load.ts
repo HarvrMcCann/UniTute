@@ -88,6 +88,7 @@ export type CourseSummary = {
   title: string;
   courseCode: string | null;
   isSample: boolean;
+  ownerId: string | null;
   lessonCount: number;
   minutes: number;
 };
@@ -96,7 +97,7 @@ export const listCourses = cache(async (): Promise<CourseSummary[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("courses")
-    .select("id, title, course_code, is_sample, lessons(est_minutes)")
+    .select("id, title, course_code, is_sample, owner_id, lessons(est_minutes)")
     .eq("status", "ready")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -106,6 +107,7 @@ export const listCourses = cache(async (): Promise<CourseSummary[]> => {
     title: c.title,
     courseCode: c.course_code,
     isSample: c.is_sample,
+    ownerId: c.owner_id,
     lessonCount: c.lessons.length,
     minutes: c.lessons.reduce((sum: number, l: { est_minutes: number }) => sum + l.est_minutes, 0),
   }));

@@ -2,6 +2,7 @@ import type { Block, Question } from "@/lib/course/schema";
 import { CalloutBlock } from "./CalloutBlock";
 import { CheckBlock } from "./CheckBlock";
 import { RelevanceBadge } from "@/components/classroom/RelevanceBadge";
+import { blockLabel } from "@/lib/tutor/context";
 import { CodeBlock } from "./CodeBlock";
 import { DiagramBlock } from "./DiagramBlock";
 import { DefinitionBlock } from "./DefinitionBlock";
@@ -24,7 +25,7 @@ type BlockRendererProps = {
 /** Wraps each block in an anchor (its stable id) so tutor links, progress and bug reports can point at it. */
 export function BlockRenderer({ block, questions, questionIds, fix }: BlockRendererProps) {
   return (
-    <section id={block.id} data-block-id={block.id} className="scroll-mt-24">
+    <section id={block.id} data-block-id={block.id} data-block-label={blockLabel(block, questions)} className="scroll-mt-24 rounded-2xl transition-shadow duration-300">
       <BlockContent block={block} questions={questions} questionIds={questionIds} fix={fix} />
     </section>
   );

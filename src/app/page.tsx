@@ -72,6 +72,7 @@ export default async function HomePage() {
                     <p className="text-sm text-accent">
                       {course.courseCode}
                       {course.isSample && <span className="text-faint"> · Sample</span>}
+                      {!course.isSample && user && course.ownerId !== user.id && <span className="text-faint"> · Shared with you</span>}
                     </p>
                     <p className="mt-1 font-display text-xl leading-snug">{course.title}</p>
                     <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted">

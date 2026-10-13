@@ -4,7 +4,9 @@ import { LinkPending } from "@/components/ui/LinkPending";
 import { ArrowLeftIcon, ArrowRightIcon, ClockIcon } from "@/components/ui/icons";
 import type { LessonLocation } from "@/lib/course/load";
 import type { Course } from "@/lib/course/schema";
+import { blockLabel } from "@/lib/tutor/context";
 import { FadeIn } from "./FadeIn";
+import { ReportProblem } from "./ReportProblem";
 import { RELEVANCE_HINT, RelevanceBadge } from "./RelevanceBadge";
 import { LESSON_END_ID, ProgressTracker } from "./ProgressTracker";
 
@@ -111,6 +113,13 @@ export function LessonView({ course, location, lessonDbId, questionIds, resumeBl
             <LessonLink href="/" label="You've finished the course" title="Back to your courses" direction="next" />
           )}
         </nav>
+        <ReportProblem
+          courseId={course.id}
+          lessonKey={lesson.id}
+          parts={lesson.blocks
+            .filter((b) => b.type !== "text" && b.type !== "summary")
+            .map((b) => ({ id: b.id, label: blockLabel(b, questions) }))}
+        />
       </article>
       </FadeIn>
     </>

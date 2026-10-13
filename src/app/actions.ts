@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { Theme } from "@/lib/theme";
 import { createClient, getUser } from "@/lib/supabase/server";
@@ -9,6 +10,7 @@ import { adjustCredit, creditCost, getCredit, MIN_CREDIT_USD } from "@/lib/credi
 import type { MasteryState } from "@/lib/mastery";
 import { markShortAnswer, VERDICT_SCORE, type Verdict } from "@/lib/marking";
 import { fixWidget, MAX_REPORT_CHARS, type FixResult } from "@/lib/widget/fix";
+import type { ChatMessage } from "@/lib/tutor/protocol";
 
 export async function signOut() {
   const supabase = await createClient();
@@ -188,4 +190,67 @@ export async function fixInteractive(input: FixInteractiveInput): Promise<FixInt
   await adjustCredit(admin, user.id, -creditCost(result.apiCostUsd), `fix ${input.lessonKey} ${input.blockId}`);
   revalidatePath(`/course/${input.courseId}/${input.lessonKey}`);
   return { ok: true };
+}
+
+// ---------- Tutor ----------
+
+/** The signed-in student's recent tutor chat in a course (oldest first). */
+export async function getTutorHistory(courseId: string): Promise<ChatMessage[]> {
+  const user = await getUser();
+  if (!user) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tutor_messages")
+    .select("id, role, content, lesson_key, anchor_block_id")
+    .eq("user_id", user.id)
+    .eq("course_id", String(courseId))
+    .order("created_at", { ascending: false })
+    .limit(40);
+  return (data ?? []).reverse().map((m) => ({
+    id: m.id,
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: m.content,
+    lessonKey: m.lesson_key,
+    anchorBlockId: m.anchor_block_id,
+  }));
+}
+
+// ---------- Bug reports ----------
+
+export async function reportProblem(input: { courseId: string; lessonKey: string; blockId: string | null; note: string }): Promise<boolean> {
+  const user = await getUser();
+  if (!user) return false;
+  const note = String(input.note ?? "").trim().slice(0, 2000);
+  if (!note) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("bug_reports").insert({
+    user_id: user.id,
+    course_id: String(input.courseId),
+    lesson_key: String(input.lessonKey).slice(0, 200),
+    block_id: input.blockId ? String(input.blockId).slice(0, 200) : null,
+    note,
+  });
+  if (error) console.warn("Couldn't save bug report:", error.message);
+  return !error;
+}
+
+// ---------- Sharing ----------
+
+/**
+ * Turns the course's share link on (a new random token) or off. Only the owner can (RLS on
+ * courses). Turning it off stops new people joining; people who already joined keep access.
+ */
+export async function setShareLink(courseId: string, enabled: boolean): Promise<{ token: string | null } | null> {
+  const user = await getUser();
+  if (!user) return null;
+  const token = enabled ? randomBytes(12).toString("base64url") : null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("courses")
+    .update({ share_token: token })
+    .eq("id", String(courseId))
+    .eq("owner_id", user.id)
+    .select("id");
+  if (error || !data?.length) return null;
+  return { token };
 }

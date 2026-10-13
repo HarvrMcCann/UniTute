@@ -10,6 +10,9 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import type { CourseOutline } from "@/lib/course/load";
 import { CurriculumNav } from "./CurriculumNav";
 import { LESSON_SCROLL_ID } from "./ProgressTracker";
+import { ConnectorOverlay } from "@/components/tutor/ConnectorOverlay";
+import { TutorProvider } from "@/components/tutor/TutorProvider";
+import { ShareDialog } from "./ShareDialog";
 import { TutorPanel } from "./TutorPanel";
 
 const DESKTOP = "(min-width: 1024px)"; // lg: three columns
@@ -34,10 +37,12 @@ const panel = "rounded-2xl border border-line bg-panel frost";
 type ClassroomShellProps = {
   outline: CourseOutline;
   account: Account | null;
+  /** Set when the signed-in user owns the course (sharing, problem reports). */
+  owner: { shareToken: string | null; memberCount: number; reportCount: number } | null;
   children: React.ReactNode;
 };
 
-export function ClassroomShell({ outline, account, children }: ClassroomShellProps) {
+export function ClassroomShell({ outline, account, owner, children }: ClassroomShellProps) {
   const { lessonId } = useParams<{ lessonId?: string }>();
   const lessonTitle = outline.units.flatMap((u) => u.lessons).find((l) => l.id === lessonId)?.title;
 
@@ -84,154 +89,165 @@ export function ClassroomShell({ outline, account, children }: ClassroomShellPro
   }
 
   return (
-    <div className="flex h-dvh flex-col print:h-auto">
-      {/* Top bar */}
-      <header className="flex h-14 shrink-0 items-center gap-1 px-2 sm:px-3 print:hidden">
-        <IconButton label="Toggle curriculum" onClick={toggleCurriculum}>
-          <MenuIcon className="lg:hidden" />
-          <SidebarIcon className="hidden lg:block" />
-        </IconButton>
-        <div className="min-w-0 flex-1 px-2">
-          <p className="truncate text-sm">
-            <span className="hidden text-muted sm:inline">{outline.courseCode} · </span>
-            <span className="font-medium">{lessonTitle ?? outline.title}</span>
-          </p>
-        </div>
-        <ThemeToggle />
-        <IconButton label="Toggle tutor" onClick={toggleTutor}>
-          <ChatIcon />
-        </IconButton>
-        <AccountMenu account={account} />
-      </header>
-
-      <div className="flex min-h-0 flex-1 gap-3 px-0 sm:px-3 sm:pb-3 print:block">
-        {/* Desktop curriculum column */}
-        <AnimatePresence initial={false}>
-          {!navCollapsed && (
-            <motion.aside
-              key="nav"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className={`hidden shrink-0 overflow-hidden lg:block print:!hidden ${panel}`}
-            >
-              <div className="h-full w-[280px]">
-                <CurriculumNav outline={outline} currentLessonId={lessonId} />
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-
-        {/* Lesson */}
-        {/* Scroll position is restored and tracked by ProgressTracker */}
-        {/* With the phone tutor sheet open, pad the bottom so the whole lesson can still scroll into view above it */}
-        <main
-          id={LESSON_SCROLL_ID}
-          className={`scroll-thin min-w-0 flex-1 overflow-y-auto print:overflow-visible ${sheetOpen ? "max-md:pb-[60dvh]" : ""}`}
-        >
-          {children}
-        </main>
-
-        {/* Tutor side panel (tablet + desktop): slides like the curriculum column */}
-        <AnimatePresence initial={false}>
-          {tutorMode !== "closed" && (
-            <motion.aside
-              // "auto" and "open" are separate elements so opening on tablet (auto -> open) slides in
-              key={tutorMode === "auto" ? "tutor-auto" : "tutor-open"}
-              aria-label="Tutor"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: tutorWidth, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className={`shrink-0 flex-col overflow-hidden print:!hidden ${panel} ${TUTOR_PANEL_CLASSES[tutorMode]}`}
-            >
-              <div className="flex h-full flex-col" style={{ width: tutorWidth }}>
-                <TutorPanel lessonTitle={lessonTitle} onClose={closeTutor} />
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Curriculum drawer (tablet + phone) */}
-      <AnimatePresence>
-        {drawerOpen && (
-          <div className="fixed inset-0 z-40 lg:hidden">
-            <motion.div
-              className="absolute inset-0 bg-scrim"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDrawerOpen(false)}
+    <TutorProvider courseId={outline.id} lessonKey={lessonId}>
+      <div className="flex h-dvh flex-col print:h-auto">
+        {/* Top bar */}
+        <header className="flex h-14 shrink-0 items-center gap-1 px-2 sm:px-3 print:hidden">
+          <IconButton label="Toggle curriculum" onClick={toggleCurriculum}>
+            <MenuIcon className="lg:hidden" />
+            <SidebarIcon className="hidden lg:block" />
+          </IconButton>
+          <div className="min-w-0 flex-1 px-2">
+            <p className="truncate text-sm">
+              <span className="hidden text-muted sm:inline">{outline.courseCode} · </span>
+              <span className="font-medium">{lessonTitle ?? outline.title}</span>
+            </p>
+          </div>
+          {owner && (
+            <ShareDialog
+              courseId={outline.id}
+              initialToken={owner.shareToken}
+              memberCount={owner.memberCount}
+              reportCount={owner.reportCount}
             />
+          )}
+          <ThemeToggle />
+          <IconButton label="Toggle tutor" onClick={toggleTutor}>
+            <ChatIcon />
+          </IconButton>
+          <AccountMenu account={account} />
+        </header>
+
+        <div className="flex min-h-0 flex-1 gap-3 px-0 sm:px-3 sm:pb-3 print:block">
+          {/* Desktop curriculum column */}
+          <AnimatePresence initial={false}>
+            {!navCollapsed && (
+              <motion.aside
+                key="nav"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 280, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className={`hidden shrink-0 overflow-hidden lg:block print:!hidden ${panel}`}
+              >
+                <div className="h-full w-[280px]">
+                  <CurriculumNav outline={outline} currentLessonId={lessonId} />
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
+
+          {/* Lesson */}
+          {/* Scroll position is restored and tracked by ProgressTracker */}
+          {/* With the phone tutor sheet open, pad the bottom so the whole lesson can still scroll into view above it */}
+          <main
+            id={LESSON_SCROLL_ID}
+            className={`scroll-thin min-w-0 flex-1 overflow-y-auto print:overflow-visible ${sheetOpen ? "max-md:pb-[60dvh]" : ""}`}
+          >
+            {children}
+          </main>
+
+          {/* Tutor side panel (tablet + desktop): slides like the curriculum column */}
+          <AnimatePresence initial={false}>
+            {tutorMode !== "closed" && (
+              <motion.aside
+                // "auto" and "open" are separate elements so opening on tablet (auto -> open) slides in
+                key={tutorMode === "auto" ? "tutor-auto" : "tutor-open"}
+                aria-label="Tutor"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: tutorWidth, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className={`shrink-0 flex-col overflow-hidden print:!hidden ${panel} ${TUTOR_PANEL_CLASSES[tutorMode]}`}
+              >
+                <div className="flex h-full flex-col" style={{ width: tutorWidth }}>
+                  <TutorPanel courseId={outline.id} lessonTitle={lessonTitle} onClose={closeTutor} />
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Curriculum drawer (tablet + phone) */}
+        <AnimatePresence>
+          {drawerOpen && (
+            <div className="fixed inset-0 z-40 lg:hidden">
+              <motion.div
+                className="absolute inset-0 bg-scrim"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setDrawerOpen(false)}
+              />
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Curriculum"
+                className="absolute inset-y-0 left-0 flex w-[85vw] max-w-[320px] flex-col border-r border-line bg-panel-solid"
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "tween", duration: 0.25, ease: "easeOut" }}
+              >
+                <div className="absolute right-2 top-2 z-10">
+                  <IconButton label="Close curriculum" onClick={() => setDrawerOpen(false)}>
+                    <CloseIcon />
+                  </IconButton>
+                </div>
+                <CurriculumNav
+                  outline={outline}
+                  currentLessonId={lessonId}
+                  onNavigate={() => setDrawerOpen(false)}
+                />
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Tutor bottom sheet (phone). Not modal: it covers the lower half and the lesson
+            above stays scrollable, so you can read while writing a question. Opaque so the lesson
+            behind never hurts legibility (and costs nothing to draw, unlike a blur). */}
+        <AnimatePresence>
+          {sheetOpen && (
             <motion.div
               role="dialog"
-              aria-modal="true"
-              aria-label="Curriculum"
-              className="absolute inset-y-0 left-0 flex w-[85vw] max-w-[320px] flex-col border-r border-line bg-panel-solid"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.25, ease: "easeOut" }}
+              aria-label="Tutor"
+              className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-3xl border-t border-line bg-panel-solid shadow-[0_-8px_30px_rgb(0_0_0/0.25)] md:hidden"
+              initial={{ y: "100%", height: "60dvh" }}
+              animate={{ y: 0, height: sheetExpanded ? "88dvh" : "60dvh" }}
+              exit={{ y: "100%" }}
+              transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
+              drag="y"
+              dragListener={false}
+              dragControls={sheetDrag}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.15, bottom: 0.6 }}
+              onDragEnd={(_, info) => {
+                const down = info.offset.y > 100 || info.velocity.y > 500;
+                const up = info.offset.y < -40 || info.velocity.y < -500;
+                if (up) setSheetExpanded(true);
+                else if (down && sheetExpanded) setSheetExpanded(false);
+                else if (down) closeTutor();
+              }}
             >
-              <div className="absolute right-2 top-2 z-10">
-                <IconButton label="Close curriculum" onClick={() => setDrawerOpen(false)}>
-                  <CloseIcon />
-                </IconButton>
+              {/* Drag handle (only this drags, so the chat can scroll). Tap to grow or shrink. */}
+              <button
+                type="button"
+                aria-label={sheetExpanded ? "Shrink tutor" : "Expand tutor"}
+                className="flex w-full cursor-grab touch-none justify-center pb-0.5 pt-2 active:transform-none"
+                onPointerDown={(e) => sheetDrag.start(e)}
+                onClick={() => setSheetExpanded((x) => !x)}
+              >
+                <span className="h-1 w-10 rounded-full bg-faint" />
+              </button>
+              <div className="min-h-0 flex-1">
+                <TutorPanel courseId={outline.id} lessonTitle={lessonTitle} onClose={closeTutor} />
               </div>
-              <CurriculumNav
-                outline={outline}
-                currentLessonId={lessonId}
-                onNavigate={() => setDrawerOpen(false)}
-              />
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Tutor bottom sheet (phone). Not modal: it covers the lower half and the lesson
-          above stays scrollable, so you can read while writing a question. Opaque so the lesson
-          behind never hurts legibility (and costs nothing to draw, unlike a blur). */}
-      <AnimatePresence>
-        {sheetOpen && (
-          <motion.div
-            role="dialog"
-            aria-label="Tutor"
-            className="fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-3xl border-t border-line bg-panel-solid shadow-[0_-8px_30px_rgb(0_0_0/0.25)] md:hidden"
-            initial={{ y: "100%", height: "60dvh" }}
-            animate={{ y: 0, height: sheetExpanded ? "88dvh" : "60dvh" }}
-            exit={{ y: "100%" }}
-            transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
-            drag="y"
-            dragListener={false}
-            dragControls={sheetDrag}
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.15, bottom: 0.6 }}
-            onDragEnd={(_, info) => {
-              const down = info.offset.y > 100 || info.velocity.y > 500;
-              const up = info.offset.y < -40 || info.velocity.y < -500;
-              if (up) setSheetExpanded(true);
-              else if (down && sheetExpanded) setSheetExpanded(false);
-              else if (down) closeTutor();
-            }}
-          >
-            {/* Drag handle (only this drags, so the chat can scroll). Tap to grow or shrink. */}
-            <button
-              type="button"
-              aria-label={sheetExpanded ? "Shrink tutor" : "Expand tutor"}
-              className="flex w-full cursor-grab touch-none justify-center pb-0.5 pt-2 active:transform-none"
-              onPointerDown={(e) => sheetDrag.start(e)}
-              onClick={() => setSheetExpanded((x) => !x)}
-            >
-              <span className="h-1 w-10 rounded-full bg-faint" />
-            </button>
-            <div className="min-h-0 flex-1">
-              <TutorPanel lessonTitle={lessonTitle} onClose={closeTutor} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          )}
+        </AnimatePresence>
+        <ConnectorOverlay />
+      </div>
+    </TutorProvider>
   );
 }

@@ -46,7 +46,7 @@ export class GenerationError extends Error {
 }
 
 let client: Anthropic | null = null;
-const anthropic = () => (client ??= new Anthropic({ maxRetries: 4 }));
+export const anthropic = () => (client ??= new Anthropic({ maxRetries: 4 }));
 
 type StructuredCall<T extends z.ZodType> = {
   system: string;
