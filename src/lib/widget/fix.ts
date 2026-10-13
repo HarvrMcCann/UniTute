@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Block } from "@/lib/course/schema";
+import type { Usage } from "@/lib/generation/claude";
 import { repairWidget } from "@/lib/generation/pipeline";
 import { hasErrors, lintWidget } from "./lint";
 
@@ -14,7 +15,7 @@ export const FIX_STEP_PREFIX = "fix ";
 export const MAX_REPORT_CHARS = 1000;
 
 /** `apiCostUsd` is what the Claude call cost, whether or not the fix worked. */
-export type FixResult = ({ ok: true } | { ok: false; reason: string }) & { apiCostUsd: number };
+export type FixResult = ({ ok: true } | { ok: false; reason: string }) & { apiCostUsd: number; usage?: Usage };
 
 export async function fixWidget(
   admin: SupabaseClient,
@@ -27,7 +28,8 @@ export async function fixWidget(
     .eq("key", input.lessonKey)
     .maybeSingle<{ id: string; title: string; blocks: Block[] }>();
   let apiCostUsd = 0;
-  const fail = (reason: string): FixResult => ({ ok: false, reason, apiCostUsd });
+  let usage: Usage | undefined;
+  const fail = (reason: string): FixResult => ({ ok: false, reason, apiCostUsd, usage });
   if (error || !lesson) return fail("Lesson not found.");
 
   const index = lesson.blocks.findIndex((b) => b.id === input.blockId && b.type === "widget");
@@ -44,7 +46,10 @@ export async function fixWidget(
     `${FIX_STEP_PREFIX}${input.lessonKey} ${block.id}`,
     { title: block.title, brief: `Lesson: ${lesson.title}\n${block.description}`, html: block.html, problems, userReport: report },
     "medium",
-    (usd) => (apiCostUsd += usd),
+    (usd, callUsage) => {
+      apiCostUsd += usd;
+      usage = callUsage;
+    },
   );
   if (!repaired) return fail("Claude couldn't produce a fix this time. Try again in a minute.");
   const after = lintWidget(repaired.html);
@@ -54,5 +59,5 @@ export async function fixWidget(
   blocks[index] = { ...block, html: repaired.html, height: Math.min(1200, Math.max(120, Math.round(repaired.height))) };
   const { error: saveError } = await admin.from("lessons").update({ blocks }).eq("id", lesson.id);
   if (saveError) return fail("Couldn't save the fix.");
-  return { ok: true, apiCostUsd };
+  return { ok: true, apiCostUsd, usage };
 }

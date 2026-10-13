@@ -1,10 +1,10 @@
 import { getCourse, locateLesson } from "@/lib/course/load";
-import { adjustCredit, creditCost, getCredit, MIN_CREDIT_USD } from "@/lib/credits";
+import { adjustCredit, creditCost, getCredit, logAiUsage, MIN_CREDIT_USD } from "@/lib/credits";
 import { getCourseProgress } from "@/lib/progress";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { blockLabel, courseMap, knowledgeLevel, lessonContext } from "@/lib/tutor/context";
-import { HISTORY_MESSAGES, MAX_MESSAGE_CHARS, streamTutorReply, tutorMessages, tutorSystem, type TutorTurn } from "@/lib/tutor/tutor";
+import { HISTORY_MESSAGES, MAX_MESSAGE_CHARS, streamTutorReply, TUTOR_MODEL, tutorMessages, tutorSystem, type TutorTurn } from "@/lib/tutor/tutor";
 import { TUTOR_STREAM_END, withQuote, type TutorStreamEnd } from "@/lib/tutor/protocol";
 
 // A reply usually streams in 3-15s; this is headroom.
@@ -91,19 +91,37 @@ export async function POST(request: Request) {
       };
       let end: TutorStreamEnd;
       try {
+        const started = Date.now();
         const reply = await streamTutorReply(system, messages, send);
         const admin = createAdminClient();
+        const charged = creditCost(reply.apiCostUsd);
+        // Haiku 5.5 can decline a request (no automatic fallback): say so instead of saving an empty reply.
+        const declined = !reply.text.trim();
         const [credit] = await Promise.all([
-          adjustCredit(admin, user.id, -creditCost(reply.apiCostUsd), `tutor ${courseId}`),
-          admin.from("tutor_messages").insert({
-            user_id: user.id,
-            course_id: courseId,
-            lesson_key: lesson.id,
-            role: "assistant",
-            content: reply.text.slice(0, 20000),
+          adjustCredit(admin, user.id, -charged, `tutor ${courseId}`),
+          logAiUsage(admin, {
+            userId: user.id,
+            courseId,
+            feature: "tutor",
+            model: TUTOR_MODEL,
+            usage: reply.usage,
+            apiCostUsd: reply.apiCostUsd,
+            chargedUsd: charged,
+            durationMs: Date.now() - started,
           }),
+          declined
+            ? null
+            : admin.from("tutor_messages").insert({
+                user_id: user.id,
+                course_id: courseId,
+                lesson_key: lesson.id,
+                role: "assistant",
+                content: reply.text.slice(0, 20000),
+              }),
         ]);
-        end = { credit: credit ?? undefined };
+        end = declined
+          ? { credit: credit ?? undefined, error: "The tutor can't help with that one. Try asking it a different way." }
+          : { credit: credit ?? undefined };
       } catch (error) {
         console.warn("tutor reply failed:", error instanceof Error ? error.message : error);
         end = { error: "The tutor couldn't answer just now. Try again in a moment." };

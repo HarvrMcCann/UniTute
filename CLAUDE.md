@@ -105,7 +105,7 @@ Before calling a phase done: `npm run lint`, `npm run typecheck`, `npm test` and
 - Only `NEXT_PUBLIC_*` variables may reach the browser; the Anthropic key and Supabase service-role key are server-only.
 - Schema changes: add a new numbered file in `supabase/migrations/` and ask the user to run it in the SQL Editor. Security: RLS on every table; browsers only use the publishable key.
 - Never print `.env.local` values, even partially masked.
-- Anything that calls Claude costs real money: get the user's OK (with an estimate) before running generation. Generation uses `claude-sonnet-5` (PLAN.md: Sonnet for generation, Haiku for the tutor). Claude never assigns IDs; assemble.ts does. Keep structured-output schemas small (the API caps compiled grammar size): prefer plain strings checked in code over enums, one flat block shape, and run `npm run check:grammar` before any real generation run.
+- Anything that calls Claude costs real money: get the user's OK (with an estimate) before running generation. Generation uses `claude-sonnet-5`; the tutor and AI marking use `claude-haiku-5-5` at medium effort with a 1-hour prompt cache (PLAN.md: Sonnet for generation, Haiku for the tutor). Paid calls are logged in `ai_usage`. Claude never assigns IDs; assemble.ts does. Keep structured-output schemas small (the API caps compiled grammar size): prefer plain strings checked in code over enums, one flat block shape, and run `npm run check:grammar` before any real generation run.
 - After deploying, re-sync Inngest: `curl -X PUT https://unituteapp.vercel.app/api/inngest` (the Vercel integration isn't syncing automatically yet).
 - Commit at the end of each phase (and at sensible checkpoints within one).
 

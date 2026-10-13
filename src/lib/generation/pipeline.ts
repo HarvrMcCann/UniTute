@@ -80,7 +80,16 @@ async function extractedTexts(admin: SupabaseClient, ids: string[]): Promise<Map
 export async function logUsage(admin: SupabaseClient, courseId: string, step: string, usage: Usage, durationMs: number) {
   const { error } = await admin
     .from("generation_usage")
-    .insert({ course_id: courseId, step, model: GENERATION_MODEL, duration_ms: durationMs, ...usage });
+    .insert({
+      course_id: courseId,
+      step,
+      model: GENERATION_MODEL,
+      duration_ms: durationMs,
+      input_tokens: usage.input_tokens,
+      output_tokens: usage.output_tokens,
+      cache_creation_input_tokens: usage.cache_creation_input_tokens,
+      cache_read_input_tokens: usage.cache_read_input_tokens,
+    });
   if (error) console.warn(`usage log failed for ${step}: ${error.message}`);
 }
 
@@ -260,7 +269,7 @@ export async function repairWidget(
   input: { title: string; brief: string; html: string; problems: WidgetProblem[]; userReport?: string },
   effort: "low" | "medium",
   /** Told the API cost of the call as soon as it's known (even if the result is unusable). */
-  onCost?: (usd: number) => void,
+  onCost?: (usd: number, usage: Usage) => void,
 ): Promise<WidgetBuild | null> {
   try {
     const { data } = await callStructured({
@@ -270,7 +279,7 @@ export async function repairWidget(
       maxTokens: 32_000,
       effort,
       onUsage: (usage, ms) => {
-        onCost?.(estimateCostUsd(usage));
+        onCost?.(estimateCostUsd(usage), usage);
         return logUsage(admin, courseId, `${label} repair`, usage, ms);
       },
     });

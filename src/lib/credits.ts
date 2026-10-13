@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Usage } from "@/lib/generation/claude";
 
 /*
  * Prepaid credit for AI features (AI marking now; the tutor, interactive fixes and course changes
@@ -35,3 +36,40 @@ export async function adjustCredit(admin: SupabaseClient, userId: string, deltaU
 export const creditCost = (apiCostUsd: number) => apiCostUsd * CREDIT_MARKUP;
 
 export const formatCredit = (usd: number) => `$${usd.toFixed(2)}`;
+
+export type AiFeature = "tutor" | "mark" | "fix";
+
+/**
+ * Records a paid Claude call's tokens and cost (ai_usage table, admin client). Never throws:
+ * a logging failure mustn't break the feature.
+ */
+export async function logAiUsage(
+  admin: SupabaseClient,
+  entry: {
+    userId: string;
+    courseId: string | null;
+    feature: AiFeature;
+    model: string;
+    usage: Usage;
+    apiCostUsd: number;
+    chargedUsd: number;
+    durationMs?: number;
+  },
+): Promise<void> {
+  const { usage } = entry;
+  const { error } = await admin.from("ai_usage").insert({
+    user_id: entry.userId,
+    course_id: entry.courseId,
+    feature: entry.feature,
+    model: entry.model,
+    input_tokens: usage.input_tokens,
+    output_tokens: usage.output_tokens,
+    cache_write_tokens: usage.cache_creation_input_tokens,
+    cache_write_1h_tokens: usage.cache_creation_1h_input_tokens ?? 0,
+    cache_read_tokens: usage.cache_read_input_tokens,
+    api_cost_usd: entry.apiCostUsd,
+    charged_usd: entry.chargedUsd,
+    duration_ms: entry.durationMs ?? null,
+  });
+  if (error) console.warn(`usage log failed (${entry.feature}): ${error.message}`);
+}

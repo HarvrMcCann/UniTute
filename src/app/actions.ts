@@ -6,7 +6,8 @@ import type { Theme } from "@/lib/theme";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { saveAnswer } from "@/lib/answers";
-import { adjustCredit, creditCost, getCredit, MIN_CREDIT_USD } from "@/lib/credits";
+import { adjustCredit, creditCost, getCredit, logAiUsage, MIN_CREDIT_USD } from "@/lib/credits";
+import { GENERATION_MODEL, MARKING_MODEL } from "@/lib/generation/claude";
 import type { MasteryState } from "@/lib/mastery";
 import { markShortAnswer, VERDICT_SCORE, type Verdict } from "@/lib/marking";
 import { fixWidget, MAX_REPORT_CHARS, type FixResult } from "@/lib/widget/fix";
@@ -57,13 +58,13 @@ export async function saveProgress(update: ProgressUpdate) {
 
 // ---------- Answers and mastery ----------
 
-type QuestionRow = { id: string; key: string; concept_id: string; type: string; prompt: string; answer: { modelAnswer?: string; markingGuide?: string } | null };
+type QuestionRow = { id: string; key: string; course_id: string; concept_id: string; type: string; prompt: string; answer: { modelAnswer?: string; markingGuide?: string } | null };
 
 async function loadQuestion(questionDbId: string): Promise<QuestionRow | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("questions")
-    .select("id, key, concept_id, type, prompt, answer")
+    .select("id, key, course_id, concept_id, type, prompt, answer")
     .eq("id", questionDbId)
     .maybeSingle<QuestionRow>();
   return data;
@@ -127,7 +128,20 @@ export async function markAnswer(input: { questionDbId: string; response: string
     return { ok: false, reason: "The marker isn't available right now, so mark this one yourself." };
   }
 
-  const credit = await adjustCredit(createAdminClient(), user.id, -creditCost(marked.apiCostUsd), `mark ${question.key}`);
+  const admin = createAdminClient();
+  const charged = creditCost(marked.apiCostUsd);
+  const [credit] = await Promise.all([
+    adjustCredit(admin, user.id, -charged, `mark ${question.key}`),
+    logAiUsage(admin, {
+      userId: user.id,
+      courseId: question.course_id,
+      feature: "mark",
+      model: MARKING_MODEL,
+      usage: marked.usage,
+      apiCostUsd: marked.apiCostUsd,
+      chargedUsd: charged,
+    }),
+  ]);
   const saved = await saveAnswer(supabase, user.id, {
     questionDbId: question.id,
     conceptDbId: question.concept_id,
@@ -187,7 +201,21 @@ export async function fixInteractive(input: FixInteractiveInput): Promise<FixInt
   });
   // Only successful fixes are charged; a failed attempt is on us.
   if (!result.ok) return { ok: false, reason: result.reason };
-  await adjustCredit(admin, user.id, -creditCost(result.apiCostUsd), `fix ${input.lessonKey} ${input.blockId}`);
+  const charged = creditCost(result.apiCostUsd);
+  await Promise.all([
+    adjustCredit(admin, user.id, -charged, `fix ${input.lessonKey} ${input.blockId}`),
+    result.usage
+      ? logAiUsage(admin, {
+          userId: user.id,
+          courseId: input.courseId,
+          feature: "fix",
+          model: GENERATION_MODEL,
+          usage: result.usage,
+          apiCostUsd: result.apiCostUsd,
+          chargedUsd: charged,
+        })
+      : null,
+  ]);
   revalidatePath(`/course/${input.courseId}/${input.lessonKey}`);
   return { ok: true };
 }

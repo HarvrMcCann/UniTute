@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { callStructured, estimateCostUsd, MARKING_MODEL } from "@/lib/generation/claude";
+import { callStructured, estimateCostUsd, MARKING_MODEL, type Usage } from "@/lib/generation/claude";
 
 /*
  * AI marking of short answers with Claude Haiku (paid users, charged to their credit).
@@ -56,17 +56,20 @@ export async function markShortAnswer(q: {
   modelAnswer: string;
   markingGuide: string;
   response: string;
-}): Promise<{ verdict: Verdict; feedback: string; apiCostUsd: number }> {
+}): Promise<{ verdict: Verdict; feedback: string; apiCostUsd: number; usage: Usage }> {
   const { data, usage } = await callStructured({
     model: MARKING_MODEL,
     system: MARKING_SYSTEM,
     content: [{ type: "text", text: markingRequest(q) }],
     schema: markSchema,
-    maxTokens: 600,
+    // Thinking counts toward this; medium effort so it weighs the answer against the guide.
+    maxTokens: 4000,
+    effort: "medium",
   });
   return {
     verdict: toVerdict(data.verdict),
     feedback: data.feedback.trim().slice(0, 800),
     apiCostUsd: estimateCostUsd(usage, MARKING_MODEL),
+    usage,
   };
 }

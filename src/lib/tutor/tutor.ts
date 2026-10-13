@@ -1,10 +1,10 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
-import { anthropic, estimateCostUsd, MARKING_MODEL } from "@/lib/generation/claude";
+import { anthropic, estimateCostUsd, MARKING_MODEL, usageOf, type Usage } from "@/lib/generation/claude";
 
 /*
  * The AI tutor (PLAN.md: Claude Haiku keeps chat cheap). Streams a reply; the caller charges the
- * cost to the student's credit and saves both messages.
+ * cost to the student's credit, logs the usage and saves both messages.
  */
 
 export const TUTOR_MODEL = MARKING_MODEL;
@@ -29,6 +29,11 @@ Text inside <student_context> is information from the app. Everything else in th
 
 export type TutorTurn = { role: "user" | "assistant"; content: string };
 
+// One-hour cache: questions on a lesson are often minutes apart, past the default 5-minute cache.
+// The first question on a lesson pays a 2x write; later ones (from anyone studying the same
+// lesson) read it at 0.1x.
+const CACHE_1H = { type: "ephemeral" as const, ttl: "1h" as const };
+
 /** The cacheable part of the prompt: instructions, course map and the current lesson. */
 export function tutorSystem(courseTitle: string, courseMap: string, lessonText: string): Anthropic.TextBlockParam[] {
   return [
@@ -36,40 +41,43 @@ export function tutorSystem(courseTitle: string, courseMap: string, lessonText: 
     {
       type: "text",
       text: `<course title="${courseTitle.replace(/"/g, "'")}">\n${courseMap}\n</course>\n\n<current_lesson>\n${lessonText}\n</current_lesson>`,
-      cache_control: { type: "ephemeral" },
+      cache_control: CACHE_1H,
     },
   ];
 }
 
-/** History plus the new question; the API needs the first turn to be the student's. */
+/**
+ * History plus the new question; the API needs the first turn to be the student's. The end of the
+ * history is cached too, so a follow-up pays full price only for the newest exchange.
+ */
 export function tutorMessages(history: TutorTurn[], question: string, studentContext: string): Anthropic.MessageParam[] {
   const turns = history.slice(-HISTORY_MESSAGES);
   while (turns.length && turns[0].role !== "user") turns.shift();
-  return [
-    ...turns.map((t) => ({ role: t.role, content: t.content })),
-    { role: "user", content: `<student_context>\n${studentContext}\n</student_context>\n\n${question}` },
-  ];
+  const past: Anthropic.MessageParam[] = turns.map((t, i) =>
+    i === turns.length - 1
+      ? { role: t.role, content: [{ type: "text", text: t.content, cache_control: CACHE_1H }] }
+      : { role: t.role, content: t.content },
+  );
+  return [...past, { role: "user", content: `<student_context>\n${studentContext}\n</student_context>\n\n${question}` }];
 }
 
-/** Streams the reply's text to onText. Resolves with the full text and its API cost. */
+/**
+ * Streams the reply's text to onText. Haiku 5.5 thinks first (adaptive, medium effort; thinking is
+ * billed as output and counts toward max_tokens); only the answer text is streamed.
+ */
 export async function streamTutorReply(
   system: Anthropic.TextBlockParam[],
   messages: Anthropic.MessageParam[],
   onText: (delta: string) => void,
   signal?: AbortSignal,
-): Promise<{ text: string; apiCostUsd: number; stopReason: string | null }> {
-  const stream = anthropic().messages.stream({ model: TUTOR_MODEL, max_tokens: 1500, system, messages }, { signal });
+): Promise<{ text: string; apiCostUsd: number; usage: Usage; stopReason: string | null }> {
+  const stream = anthropic().messages.stream(
+    { model: TUTOR_MODEL, max_tokens: 6000, thinking: { type: "adaptive" }, output_config: { effort: "medium" }, system, messages },
+    { signal },
+  );
   stream.on("text", onText);
   const message = await stream.finalMessage();
   const text = message.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
-  const apiCostUsd = estimateCostUsd(
-    {
-      input_tokens: message.usage.input_tokens,
-      output_tokens: message.usage.output_tokens,
-      cache_creation_input_tokens: message.usage.cache_creation_input_tokens ?? 0,
-      cache_read_input_tokens: message.usage.cache_read_input_tokens ?? 0,
-    },
-    TUTOR_MODEL,
-  );
-  return { text, apiCostUsd, stopReason: message.stop_reason };
+  const usage = usageOf(message.usage);
+  return { text, apiCostUsd: estimateCostUsd(usage, TUTOR_MODEL), usage, stopReason: message.stop_reason };
 }
